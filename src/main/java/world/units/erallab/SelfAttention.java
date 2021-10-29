@@ -39,8 +39,6 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
   private final double[] kbias;
   @JsonProperty
   private final double[] vbias;
-  //@JsonProperty
-  //private final double[][] posEmbedding;
 
   private final double[][] attention;
   private double[][] latentCode;
@@ -59,8 +57,7 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
                        @JsonProperty("wv") double[][] wv,
                        @JsonProperty("qbias") double[] qbias,
                        @JsonProperty("kbias") double[] kbias,
-                       @JsonProperty("vbias") double[] vbias/*,
-                       @JsonProperty("posEmbedding") double[][] posEmbedding*/) {
+                       @JsonProperty("vbias") double[] vbias) {
     this.inner = inner;
     this.n = n;
     this.din = din;
@@ -72,7 +69,6 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     this.qbias = qbias;
     this.kbias = kbias;
     this.vbias = vbias;
-    //this.posEmbedding = posEmbedding;
     this.attention = new double[n][n];
     this.latentCode = new double[n][dv];
     this.q = new double[n][dk];
@@ -80,9 +76,9 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     this.v = new double[n][dv];
   }
 
-  public SelfAttention(MultiLayerPerceptron inner, int n, int din, int dk, int dv) {//, int id) {
+  public SelfAttention(MultiLayerPerceptron inner, int n, int din, int dk, int dv) {
     this(inner, n, din, dk, dv, new double[din][dk], new double[din][dk], new double[din][dv],
-            new double[dk], new double[dk], new double[dv]);//, oneHot(n, id));
+            new double[dk], new double[dk], new double[dv]);
   }
 
   public static double[][] oneHot(int n, int id) {
@@ -90,8 +86,6 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     vec[id][0] = 1.0;
     return vec;
   }
-
-  //public double[][] getPositionalEmbedding() { return this.posEmbedding; }
   // TODO: rename
   public static int countParams(int din, int dk, int dv) {
     return (din * dk) + dk + (din * dk) + dk + (din * dv) + dv;
@@ -132,7 +126,7 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
   @Override
   public void setParams(double[] params) {
     this.setAttentionParams(Arrays.stream(params).limit(countParams(this.din, this.dk, this.dv)).toArray());
-    this.setDownstreamParams(Arrays.stream(params).skip(countParams(this.din, this.dk, this.dv)).limit(params.length).toArray());
+    this.setDownstreamParams(Arrays.stream(params).skip(countParams(this.din, this.dk, this.dv)).toArray());
   }
 
   public static double[] concat(double[]... arrays) {
@@ -145,25 +139,21 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
 
   @Override
   public double[] apply(double[] inputs) {
-    //if (inputs.length != /*this.n * */this.din) {
-    //  throw new RuntimeException(String.format("Expected input size %d, found %d", this.din/* * this.n*/, inputs.length));
-    //}
-    //this.applyAttention(inputs);
     return this.inner.apply(flat(this.applyAttention(inputs)));
   }
 
   public double[][] applyAttention(double[] inputs) {
-    double[][] reshaped = reshapeVector(inputs, this.n, this.din);//positionalEncoding(inputs, this.posEmbedding);
+    double[][] reshaped = reshapeVector(inputs, this.n, this.din);
     linearTransform(reshaped, this.wq, this.qbias, this.q);
     double[][] keys = matrixTranspose(linearTransform(reshaped, this.wk, this.kbias, this.k));
-    //linearTransform(reshaped, this.wv, this.vbias, this.v);
+    linearTransform(reshaped, this.wv, this.vbias, this.v);
     matrixMult(this.q, keys, this.attention);
     matrixDiv(this.attention, Math.sqrt(this.dk));
     for (double[] row : this.attention) {
-      tanh(row);//softmax(row);
+      /*tanh(row);*/softmax(row);
     }
-    this.latentCode = this.attention;
-    return matrixMult(this.attention, this.v, this.latentCode);
+    //this.latentCode = this.attention;
+    return /*this.latentCode;*/matrixMult(this.attention, this.v, this.latentCode);
   }
 
   public static double[][] positionalEncoding(double[] inputs, double[][] posEmbedding) {
@@ -184,7 +174,7 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     return reshaped;
   }
 
-  private static double[] flat(double[][] input) {
+  public static double[] flat(double[][] input) {
     int dim = input[0].length;
     double[] flattened = new double[dim * input.length];
     for (int i = 0; i < input.length; ++i) {
@@ -284,7 +274,9 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
 
   @Override
   public Snapshot getSnapshot() {
-    return new Snapshot(new MLPState(this.attention, this.inner.getWeights(), Domain.of(-1d, 1d)), this.getClass());
+    double[][][] weights = new double[1][][];
+    weights[0] = reshapeVector(this.getAttentionParams(), 1, this.countParams());
+    return new Snapshot(new MLPState(this.attention, weights, Domain.of(-1d, 1d)), this.getClass());
   }
 
 }

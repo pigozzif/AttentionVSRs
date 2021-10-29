@@ -16,7 +16,6 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
   private final int dk;
   private final int dv;
   private final String distribution;
-  //private final Map<Pair<Integer, Integer>, Integer> idMap;
 
   public SelfAttentionPartiallyDistributedMapper(Grid<? extends SensingVoxel> b, String config) {
     super(b, 1, config.split("-")[0]);
@@ -28,15 +27,6 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
     if (!(this.distribution.equals("homo|homo") || this.distribution.equals("hetero|homo") || this.distribution.equals("homo|hetero") || this.distribution.equals("hetero|hetero"))) {
       throw new IllegalArgumentException(String.format("Distribution model not known: %s", this.distribution));
     }
-    /*this.idMap = new HashMap<>();
-    int num = 0;
-    for (int i = 0; i < this.body.getW(); ++i) {
-      for (int j = 0; j < this.body.getH(); ++j) {
-        if (this.body.get(i, j) != null) {
-          this.idMap.put(new Pair<>(i, j), num++);
-        }
-      }
-    }*/
   }
 
   public static int[] parseAttentionParams(String config) {
@@ -48,9 +38,9 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
   public SelfAttention getFunction(PartiallyDistributedSensing controller, Grid.Entry<? extends SensingVoxel> entry) {
     //int inputs = controller.nOfInputs(entry.getX(), entry.getY());
     //int mlpInput = inputs * this.dv;
-    int mlpInput = this.nNeighbors * this.nNeighbors;//this.dv;
+    int mlpInput = this.nNeighbors * /*this.nNeighbors;*/this.dv;
     return new SelfAttention(new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, mlpInput, new int[]{}, controller.nOfOutputs(entry.getX(), entry.getY())),
-              /*inputs*/this.nNeighbors, this.din, this.dk, this.dv);//, this.idMap.get(new Pair<>(entry.getX(), entry.getY())));
+              /*inputs*/this.nNeighbors, this.din, this.dk, this.dv);
   }
 
   @Override
@@ -94,7 +84,7 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
       if (entry.getValue() == null) {
         continue;
       }
-      int inputs = /*PartiallyDistributedSensing.inputs(entry.getValue(), */(int) Math.pow(AbstractPartiallyDistributedMapper.getNumberNeighbors(this.neighborConfig, body), 2);// * this.dv;
+      int inputs = /*PartiallyDistributedSensing.inputs(entry.getValue(), */(int) Math.pow(AbstractPartiallyDistributedMapper.getNumberNeighbors(this.neighborConfig, body), 1) * this.dv;
       sumDownstream += MultiLayerPerceptron.countWeights(MultiLayerPerceptron.countNeurons(inputs, new int[]{}, /*getNumberNeighbors(pieces[0], body) + 1));*/2));
       break;
     }

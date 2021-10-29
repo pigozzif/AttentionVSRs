@@ -1,8 +1,9 @@
 package world.units.erallab.mappers;
 
 import it.units.erallab.hmsrobots.core.controllers.CentralizedSensing;
+import it.units.erallab.hmsrobots.core.controllers.Controller;
 import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
-import it.units.erallab.hmsrobots.core.controllers.StepController;
+import it.units.erallab.hmsrobots.core.controllers.RealFunction;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
 import it.units.erallab.hmsrobots.util.Grid;
@@ -22,6 +23,7 @@ public class CentralizedMapper implements Function<List<Double>, Robot<?>>, Geno
   private final int dk;
   private final int dv;
   private final int nVoxels;
+  private final boolean isBaseline;
 
   public CentralizedMapper(Grid<? extends SensingVoxel> b, String config) {
     this.body = b;
@@ -30,16 +32,22 @@ public class CentralizedMapper implements Function<List<Double>, Robot<?>>, Geno
     this.dk = params[1];
     this.dv = params[2];
     this.nVoxels = (int) b.count(Objects::nonNull);
+    this.isBaseline = config.contains("baseline");
   }
 
   public Robot<?> apply(List<Double> genotype) {
     if (genotype.size() != this.getGenotypeSize()) {
       throw new IllegalArgumentException(String.format("Wrong genotype size %d instead of %d", genotype.size(), this.getGenotypeSize()));
     }
-    CentralizedSensing controller = new CentralizedSensing(this.nVoxels * this.din, this.nVoxels, new SelfAttention(new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, nVoxels * this.dv, new int[]{}, this.nVoxels),
-            this.nVoxels, this.din, this.dk, this.dv));
+    RealFunction function = (this.isBaseline) ? new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, this.nVoxels * this.din, new int[]{}, this.nVoxels) : new SelfAttention(new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, this.nVoxels * this.dv, new int[]{}, this.nVoxels),
+            this.nVoxels, this.din, this.dk, this.dv);
+    CentralizedSensing controller = new CentralizedSensing(this.nVoxels * this.din, this.nVoxels, function);
     ((Parametrized) controller.getFunction()).setParams(genotype.stream().mapToDouble(d -> d).toArray());
-    return new Robot<>(new StepController<>(controller, 0.33), SerializationUtils.clone(body));
+    return new Robot<>(Controller.step(controller, 0.33), SerializationUtils.clone(body));
+  }
+
+  public int getAttentionSizeForVoxel() {
+    return SelfAttention.countParams(this.din, this.dk, this.dv);
   }
 
   @Override
@@ -49,11 +57,14 @@ public class CentralizedMapper implements Function<List<Double>, Robot<?>>, Geno
       if (entry.getValue() == null) {
         continue;
       }
-      int inputs = this.nVoxels * this.dv;
+      int inputs = (this.isBaseline) ? this.nVoxels * this.din : this.nVoxels * this.nVoxels;
       sumDownstream += MultiLayerPerceptron.countWeights(MultiLayerPerceptron.countNeurons(inputs, new int[]{}, this.nVoxels));
       break;
     }
-    return sumDownstream + SelfAttention.countParams(this.din, this.dk, this.dv);
+    if (this.isBaseline) {
+      return sumDownstream;
+    }
+    return sumDownstream + this.getAttentionSizeForVoxel();
   }
 
 }

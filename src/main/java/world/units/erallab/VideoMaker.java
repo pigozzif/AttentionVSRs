@@ -139,7 +139,7 @@ public class VideoMaker {
         if (outputFileName == null) {
             gridSnapshotListener = new GridOnlineViewer(
                     Grid.create(namedRobotGrid, p -> p == null ? null : p.getLeft()),
-                    Grid.create(namedRobotGrid, p -> p == null ? null : (inputFileName.contains("attention")) ? getAttentionDrawer(p.getLeft(), inputFileName) : Drawers.basicWithMiniWorld(p.getLeft())),//Drawers.basicWithMiniWorldAndBrain(p.getLeft())),
+                    Grid.create(namedRobotGrid, p -> p == null ? null : (!inputFileName.contains("baseline")) ? getAttentionDrawer(p.getLeft(), inputFileName) : Drawers.basicWithMiniWorldAndBrain(p.getLeft())),//Drawers.basicWithMiniWorldAndBrain(p.getLeft())),
                     uiExecutor
             );
             ((GridOnlineViewer) gridSnapshotListener).start(3);
@@ -149,7 +149,7 @@ public class VideoMaker {
                         w, h, startTime, frameRate, VideoUtils.EncoderFacility.valueOf(encoderName.toUpperCase()),
                         new File(outputFileName),
                         Grid.create(namedRobotGrid, p -> p == null ? null : p.getLeft()),
-                        Grid.create(namedRobotGrid, p -> p == null ? null : (inputFileName.contains("attention")) ? getAttentionDrawer(p.getLeft(), inputFileName) : Drawers.basicWithMiniWorld(p.getLeft())));
+                        Grid.create(namedRobotGrid, p -> p == null ? null : (!inputFileName.contains("baseline")) ? getAttentionDrawer(p.getLeft(), inputFileName) : Drawers.basicWithMiniWorld(p.getLeft())));
             } catch (IOException e) {
                 L.severe(String.format("Cannot build grid file writer: %s", e));
                 System.exit(-1);

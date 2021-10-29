@@ -158,9 +158,8 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
             double[] inputs = ArrayUtils.addAll(entry.getValue().getSensorReadings(), signals);
             //compute outputs
             TimedRealFunction function = this.functions.get(entry.getX(), entry.getY());
-            double[] outputs = function != null ? function.apply(t, positionalEncoding(inputs, (int) voxels.count(Objects::nonNull), i++)) : new double[this.nOfOutputs(entry.getX(), entry.getY())];
+            double[] outputs = function != null ? function.apply(t, frequencyEncoding(inputs, (int) voxels.count(Objects::nonNull), i++)) : new double[this.nOfOutputs(entry.getX(), entry.getY())];
             //apply outputs
-            //entry.getValue().applyForce(outputs[0]);
             outputGrid.set(entry.getX(), entry.getY(), outputs[0]);
             System.arraycopy(outputs, 1, this.currSignalsGrid.get(entry.getX(), entry.getY()), 0, this.nOfOutputs(entry.getX(), entry.getY()) - 1);
         }
@@ -183,6 +182,14 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
             }
         }
         return pos;
+    }
+
+    public static double[] frequencyEncoding(double[] inputs, int n, int i) {
+        double[] pos = new double[n];
+        for (int j = 0; j < n; ++j) {
+            pos[j] = Math.cos(i / Math.pow(10000, (2.0 * j) / inputs.length));
+        }
+        return SelfAttention.flat(SelfAttention.matrixMult(SelfAttention.reshapeVector(pos, pos.length, 1), SelfAttention.reshapeVector(inputs, 1, inputs.length)));
     }
 
     public int nOfInputs(int x, int y) {

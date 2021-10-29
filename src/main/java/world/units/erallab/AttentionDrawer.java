@@ -49,9 +49,20 @@ public class AttentionDrawer implements Drawer {
   public void draw(double v, Snapshot snapshot, Graphics2D graphics2D) {
     List<Snapshot> distributedSensingShapes = new ArrayList<>();
     traverse(snapshot, distributedSensingShapes);
-    if (!distributedSensingShapes.isEmpty()) {
-      Snapshot distributedSensingSnapshot = distributedSensingShapes.get(0);
-      Grid<TimedRealFunction> functions = ((DistributedSensingShape) distributedSensingSnapshot.getContent()).getFunctionGrid();
+    if (distributedSensingShapes.stream().anyMatch(s -> s.getContent() instanceof MLPState)) {
+      MLPState state = (MLPState) distributedSensingShapes.stream().filter(s -> s.getContent() instanceof MLPState).findAny().get().getContent();
+      for (int i = 0; i < this.body.getW(); ++i) {
+        for (int j = 0; j < this.body.getH(); ++j) {
+          if (this.body.get(i, j) == null) {
+            continue;
+          }
+          this.attentionGrid.set(i, j, state.getActivationValues());
+        }
+      }
+    }
+    else if (distributedSensingShapes.stream().anyMatch(s -> s.getContent() instanceof DistributedSensingShape)) {
+      Snapshot state = distributedSensingShapes.stream().filter(s -> s.getContent() instanceof DistributedSensingShape).findAny().get();
+      Grid<TimedRealFunction> functions = ((DistributedSensingShape) state.getContent()).getFunctionGrid();
       for (int i = 0; i < this.body.getW(); ++i) {
         for (int j = 0; j < this.body.getH(); ++j) {
           if (functions.get(i, j) == null) {
@@ -216,9 +227,9 @@ public class AttentionDrawer implements Drawer {
   }
 
   private static void traverse(Snapshot snapshot, List<Snapshot> targets) {
-    if (snapshot.getContent() instanceof DistributedSensingShape) {
+    //if (snapshot.getContent() instanceof DistributedSensingShape) {
       targets.add(snapshot);
-    }
+    //}
     for (Snapshot s : snapshot.getChildren()) {
       traverse(s, targets);
     }
