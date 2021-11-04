@@ -49,6 +49,7 @@ public class VideoMaker {
     public static void main(String[] args) throws IOException, InterruptedException {
         //get params
         String inputFileName = a(args, "input", null);
+        int iter = Integer.parseInt(a(args, "iter", "-1"));
         int numDirs = inputFileName.split("/").length;
         String seed = inputFileName.split("/")[numDirs - 1].split("\\.")[2];
         String outputFileName = a(args, "output", null);
@@ -66,7 +67,7 @@ public class VideoMaker {
         Reader reader = null;
         List<CSVRecord> records = null;
         List<String> headers = null;
-        parseBestFromFile(inputFileName);
+        parseBestFromFile(inputFileName, iter);
         String input = "./to_film.txt";
         try {
             reader = new FileReader(input);
@@ -139,7 +140,7 @@ public class VideoMaker {
         if (outputFileName == null) {
             gridSnapshotListener = new GridOnlineViewer(
                     Grid.create(namedRobotGrid, p -> p == null ? null : p.getLeft()),
-                    Grid.create(namedRobotGrid, p -> p == null ? null : (!inputFileName.contains("baseline")) ? getAttentionDrawer(p.getLeft(), inputFileName) : Drawers.basicWithMiniWorldAndBrain(p.getLeft())),//Drawers.basicWithMiniWorldAndBrain(p.getLeft())),
+                    Grid.create(namedRobotGrid, p -> p == null ? null : (!inputFileName.contains("baseline")) ? getAttentionDrawer(p.getLeft(), inputFileName) : Drawers.basicWithMiniWorldAndBrain(p.getLeft())),
                     uiExecutor
             );
             ((GridOnlineViewer) gridSnapshotListener).start(3);
@@ -168,13 +169,13 @@ public class VideoMaker {
         }
     }
 
-    public static void parseBestFromFile(String file) throws IOException {
+    public static void parseBestFromFile(String file, int iter) throws IOException {
         BufferedWriter writer = new BufferedWriter(new FileWriter("to_film.txt"));
         Reader reader = new FileReader(file);
         List<CSVRecord> records;
         CSVParser csvParser = CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader().parse(reader);
         records = csvParser.getRecords();
-        String best = records.get(records.size() - 1).get("best→solution→serialized");
+        String best = records.get((iter == -1) ? records.size() - 1 : iter).get("best→solution→serialized");
         reader.close();
         writer.write("x;y;serialized\n");
         writer.write("0;0;" + best);

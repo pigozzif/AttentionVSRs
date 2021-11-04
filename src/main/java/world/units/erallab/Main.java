@@ -38,6 +38,7 @@ import org.dyn4j.dynamics.Settings;
 import world.units.erallab.mappers.AbstractPartiallyDistributedMapper;
 import world.units.erallab.mappers.CentralizedMapper;
 import world.units.erallab.mappers.GenotypeSized;
+import world.units.erallab.mappers.SelfAttentionPartiallyDistributedMapper;
 
 import static it.units.malelab.jgea.core.listener.NamedFunctions.*;
 
@@ -99,8 +100,8 @@ public class Main extends Worker {
                 case "es" -> this.evolveES(factory, mapper, trainingTask);
                 case "ga" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new GaussianMutation(0.35D), 0.2D, new GeometricCrossover(Range.closed(-0.5D, 1.5D)).andThen(new GaussianMutation(0.1D)), 0.8D));
                 case "ga-mut" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new GaussianMutation(0.35D), 1.0D));
-                case "ga-mod-mut" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new ModuleGaussianMutation(0.35D, ((CentralizedMapper) mapper).getAttentionSizeForVoxel()), 1.0));
-                case "ga-mix-cx" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new ModuleCrossover(((CentralizedMapper) mapper).getAttentionSizeForVoxel()).andThen(new GaussianMutation(0.1D)), 8.0D, new GaussianMutation(0.35D), 0.2D));
+                case "ga-mod-mut" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new ModuleGaussianMutation(0.35D, ((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()), 1.0));
+                case "ga-mix-cx" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new ModuleCrossover(((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()).andThen(new GaussianMutation(0.1D)), 8.0D, new GaussianMutation(0.35D), 0.2D));
                 default -> throw new IllegalStateException(String.format("Evolver not known: %s", evolverName));
             };
             L.info(String.format("Done %s: %d solutions in %4ds", bestFileName, solutions.size(), stopwatch.elapsed(TimeUnit.SECONDS)));

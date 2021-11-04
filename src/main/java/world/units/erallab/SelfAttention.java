@@ -146,14 +146,14 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     double[][] reshaped = reshapeVector(inputs, this.n, this.din);
     linearTransform(reshaped, this.wq, this.qbias, this.q);
     double[][] keys = matrixTranspose(linearTransform(reshaped, this.wk, this.kbias, this.k));
-    linearTransform(reshaped, this.wv, this.vbias, this.v);
+    //linearTransform(reshaped, this.wv, this.vbias, this.v);
     matrixMult(this.q, keys, this.attention);
     matrixDiv(this.attention, Math.sqrt(this.dk));
     for (double[] row : this.attention) {
-      /*tanh(row);*/softmax(row);
+      tanh(row);//softmax(row);
     }
-    //this.latentCode = this.attention;
-    return /*this.latentCode;*/matrixMult(this.attention, this.v, this.latentCode);
+    this.latentCode = this.attention;
+    return this.latentCode;//matrixMult(this.attention, this.v, this.latentCode);
   }
 
   public static double[][] positionalEncoding(double[] inputs, double[][] posEmbedding) {

@@ -38,7 +38,7 @@ public class AttentionDrawer implements Drawer {
     this.textColor = textColor;
     this.axesColor = axesColor;
     this.legendSize = legendSize;
-    this.attentionGrid = Grid.create(this.body.getW(), this.body.getH(), (x, y) -> new double[(int) this.body.count(e -> e)][(int) this.body.count(e -> e)]);
+    this.attentionGrid = Grid.create(this.body.getW(), this.body.getH(), (x, y) -> new double[][]{});
   }
 
   public AttentionDrawer(Grid<Boolean> body) {

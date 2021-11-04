@@ -16,14 +16,16 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
   private final int dk;
   private final int dv;
   private final String distribution;
+  private final boolean isTanh;
 
   public SelfAttentionPartiallyDistributedMapper(Grid<? extends SensingVoxel> b, String config) {
-    super(b, 1, config.split("-")[0]);
+    super(b, config.contains("none") ? 0 : 1, config.split("-")[0]);
     int[] params = parseAttentionParams(config);
     this.din = params[0];
     this.dk = params[1];
     this.dv = params[2];
-    this.distribution = (params.length >= 5) ? config.split("-")[4] : "homo|homo";
+    this.distribution = config.split("-")[4];
+    this.isTanh = config.split("-")[5].equals("tanh");
     if (!(this.distribution.equals("homo|homo") || this.distribution.equals("hetero|homo") || this.distribution.equals("homo|hetero") || this.distribution.equals("hetero|hetero"))) {
       throw new IllegalArgumentException(String.format("Distribution model not known: %s", this.distribution));
     }
@@ -36,11 +38,10 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
 
   @Override
   public SelfAttention getFunction(PartiallyDistributedSensing controller, Grid.Entry<? extends SensingVoxel> entry) {
-    //int inputs = controller.nOfInputs(entry.getX(), entry.getY());
-    //int mlpInput = inputs * this.dv;
-    int mlpInput = this.nNeighbors * /*this.nNeighbors;*/this.dv;
+    int nVoxels = (int) this.body.count(Objects::nonNull);
+    int mlpInput = (this.isTanh) ? nVoxels * nVoxels : nVoxels * this.dv;
     return new SelfAttention(new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, mlpInput, new int[]{}, controller.nOfOutputs(entry.getX(), entry.getY())),
-              /*inputs*/this.nNeighbors, this.din, this.dk, this.dv);
+              nVoxels, this.din, this.dk, this.dv);
   }
 
   @Override
@@ -80,12 +81,13 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
 
   public int getDownstreamSizeForVoxel() {
     int sumDownstream = 0;
+    int nVoxels = (int) this.body.count(Objects::nonNull);
     for (Grid.Entry<? extends SensingVoxel> entry : this.body) {
       if (entry.getValue() == null) {
         continue;
       }
-      int inputs = /*PartiallyDistributedSensing.inputs(entry.getValue(), */(int) Math.pow(AbstractPartiallyDistributedMapper.getNumberNeighbors(this.neighborConfig, body), 1) * this.dv;
-      sumDownstream += MultiLayerPerceptron.countWeights(MultiLayerPerceptron.countNeurons(inputs, new int[]{}, /*getNumberNeighbors(pieces[0], body) + 1));*/2));
+      int inputs = (this.isTanh) ? nVoxels * nVoxels : nVoxels * this.dv;
+      sumDownstream += MultiLayerPerceptron.countWeights(MultiLayerPerceptron.countNeurons(inputs, new int[]{}, this.neighborConfig.contains("none") ? 1 : 2));
       break;
     }
     return sumDownstream;

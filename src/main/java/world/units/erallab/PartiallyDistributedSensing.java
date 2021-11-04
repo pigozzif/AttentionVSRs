@@ -77,7 +77,7 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
     private final Grid<double[]> currSignalsGrid;
 
     public static int inputs(SensingVoxel voxel, int nNeighbors) {
-        return (nNeighbors + voxel.getSensors().stream().mapToInt(s -> s.getDomains().length).sum()) * nNeighbors;
+        return nNeighbors + voxel.getSensors().stream().mapToInt(s -> s.getDomains().length).sum();
     }
 
     @JsonCreator
@@ -100,13 +100,13 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
     public PartiallyDistributedSensing(Grid<? extends SensingVoxel> voxels, int signals, String config, int nNeighbors) {
         this(
                 signals,
-                Grid.create(voxels.getW(), voxels.getH(), (x, y) -> voxels.get(x, y) == null ? 0 : inputs(voxels.get(x, y), nNeighbors)),
+                Grid.create(voxels.getW(), voxels.getH(), (x, y) -> voxels.get(x, y) == null ? 0 : inputs(voxels.get(x, y), nNeighbors) * (int) voxels.count(Objects::nonNull)),
                 Grid.create(
                         voxels.getW(),
                         voxels.getH(),
                         (x, y) -> voxels.get(x, y) == null ? null : new FunctionWrapper(RealFunction.build(
                                 (double[] in) -> new double[1 + signals * nNeighbors],
-                                inputs(voxels.get(x, y), nNeighbors),
+                                inputs(voxels.get(x, y), nNeighbors) * (int) voxels.count(Objects::nonNull),
                                 1 + signals * nNeighbors)
                         )
                 ),
@@ -155,10 +155,11 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
             }
             //get inputs
             double[] signals = this.getLastSignals(entry.getX(), entry.getY(), voxels);
+            //signals = Arrays.stream(signals).map(d -> (d > 0) ? 1.0D : -1.0D).toArray();
             double[] inputs = ArrayUtils.addAll(entry.getValue().getSensorReadings(), signals);
             //compute outputs
             TimedRealFunction function = this.functions.get(entry.getX(), entry.getY());
-            double[] outputs = function != null ? function.apply(t, frequencyEncoding(inputs, (int) voxels.count(Objects::nonNull), i++)) : new double[this.nOfOutputs(entry.getX(), entry.getY())];
+            double[] outputs = function != null ? function.apply(t, positionalEncoding(inputs, (int) voxels.count(Objects::nonNull), i++)) : new double[this.nOfOutputs(entry.getX(), entry.getY())];
             //apply outputs
             outputGrid.set(entry.getX(), entry.getY(), outputs[0]);
             System.arraycopy(outputs, 1, this.currSignalsGrid.get(entry.getX(), entry.getY()), 0, this.nOfOutputs(entry.getX(), entry.getY()) - 1);

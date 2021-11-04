@@ -28,7 +28,7 @@ public class MLPPartiallyDistributedMapper extends AbstractPartiallyDistributedM
     return new MultiLayerPerceptron(
             MultiLayerPerceptron.ActivationFunction.TANH,
             inputs,
-            new int[]{},
+            new int[]{inputs},
             controller.nOfOutputs(entry.getX(), entry.getY())
     );
   }
@@ -50,8 +50,8 @@ public class MLPPartiallyDistributedMapper extends AbstractPartiallyDistributedM
       if (entry.getValue() == null) {
         continue;
       }
-      int inputs = PartiallyDistributedSensing.inputs(entry.getValue(), AbstractPartiallyDistributedMapper.getNumberNeighbors(this.neighborConfig, this.body));
-      sum += MultiLayerPerceptron.countWeights(MultiLayerPerceptron.countNeurons(inputs, new int[]{}, /*getNumberNeighbors(config, body) + 1));*/(this.neighborConfig.contains("none") ? 1 : 2)));
+      int inputs = PartiallyDistributedSensing.inputs(entry.getValue(), this.nNeighbors) *  (int) this.body.count(Objects::nonNull);
+      sum += MultiLayerPerceptron.countWeights(MultiLayerPerceptron.countNeurons(inputs, new int[]{inputs}, (this.neighborConfig.contains("none") ? 1 : 2)));
       break;
     }
     return sum;

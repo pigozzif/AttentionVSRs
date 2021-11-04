@@ -39,7 +39,7 @@ public class CentralizedMapper implements Function<List<Double>, Robot<?>>, Geno
     if (genotype.size() != this.getGenotypeSize()) {
       throw new IllegalArgumentException(String.format("Wrong genotype size %d instead of %d", genotype.size(), this.getGenotypeSize()));
     }
-    RealFunction function = (this.isBaseline) ? new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, this.nVoxels * this.din, new int[]{}, this.nVoxels) : new SelfAttention(new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, this.nVoxels * this.dv, new int[]{}, this.nVoxels),
+    RealFunction function = (this.isBaseline) ? new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, this.nVoxels * this.din, new int[]{this.nVoxels * this.din}, this.nVoxels) : new SelfAttention(new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, this.nVoxels * this.dv, new int[]{}, this.nVoxels),
             this.nVoxels, this.din, this.dk, this.dv);
     CentralizedSensing controller = new CentralizedSensing(this.nVoxels * this.din, this.nVoxels, function);
     ((Parametrized) controller.getFunction()).setParams(genotype.stream().mapToDouble(d -> d).toArray());
@@ -58,7 +58,7 @@ public class CentralizedMapper implements Function<List<Double>, Robot<?>>, Geno
         continue;
       }
       int inputs = (this.isBaseline) ? this.nVoxels * this.din : this.nVoxels * this.nVoxels;
-      sumDownstream += MultiLayerPerceptron.countWeights(MultiLayerPerceptron.countNeurons(inputs, new int[]{}, this.nVoxels));
+      sumDownstream += MultiLayerPerceptron.countWeights(MultiLayerPerceptron.countNeurons(inputs, (this.isBaseline) ? new int[]{inputs} : new int[]{}, this.nVoxels));
       break;
     }
     if (this.isBaseline) {

@@ -25,13 +25,13 @@ public class SaveWeights {
 
   public static class AttentionListener implements SnapshotListener {
 
-    public final double[][] attentionWeights;
+    public final double[][][] activations;
     public int step;
     public int dv;
     public int din;
 
     public AttentionListener(String experiment) {
-      this.attentionWeights = new double[30 * 60][];
+      this.activations = new double[][][]{};
       this.step = 0;
       this.dv = Integer.parseInt(experiment.split("\\.")[4].split("-")[2]);
       this.din = (experiment.contains("biped")) ? 14 : 15;
@@ -42,33 +42,40 @@ public class SaveWeights {
       if (!(snapshot.getContent() instanceof MLPState)) {
         throw new RuntimeException("Attention listener with non-MLPState content");
       }
-      this.attentionWeights[this.step] = Arrays.stream(((MLPState) snapshot.getContent()).getWeights()[0][0]).limit(((long) this.din * this.dv) * 2).toArray();
+      this.activations[this.step] = ((MLPState) snapshot.getContent()).getActivationValues();
       this.step++;
     }
 
-    public double[][] getData() { return this.attentionWeights; }
+    public double[][][] getData() { return this.activations; }
 
   }
 
   private static final String dir = "/Users/federicopigozzi/Desktop/PhD/test/AttentionVSRs/output/attention/";
 
   public static void main(String[] args) throws IOException {
-    for (File file : Files.walk(Paths.get(dir)).filter(p -> Files.isRegularFile(p) && p.toString().contains("best")).map(Path::toFile).collect(Collectors.toList())) {
+    BufferedWriter writer = new BufferedWriter(new FileWriter("attention_activations.csv", true));
+    for (File file : Files.walk(Paths.get(dir)).filter(p -> Files.isRegularFile(p) && p.toString().contains("best") && p.toString().contains("homo|homo") && p.toString().contains(".ga.") && p.toString().contains("biped")).map(Path::toFile).collect(Collectors.toList())) {
       String path = file.getPath();
       System.out.println(path);
-      //AttentionListener listener = new AttentionListener(path.split("/")[path.split("/").length - 1]);
+      AttentionListener listener = new AttentionListener(path.split("/")[path.split("/").length - 1]);
       Robot<?> robot = SerializationUtils.deserialize(getSerializedFromFile(file), Robot.class, SerializationUtils.Mode.GZIPPED_JSON);
-      //Outcome data = getOutcomeFromSimulation(robot, listener);
-      String experiment = path.split("/")[path.split("/").length - 1];
-      int dk = Integer.parseInt(experiment.split("\\.")[4].split("-")[2]);
-      int din = Integer.parseInt(experiment.split("\\.")[4].split("-")[1]);
-      writeWeightsToFile(robot, dk, din, path.replace("best", "weights"));
+      Outcome data = getOutcomeFromSimulation(robot, listener);
+      writer.write(String.join(";", "true", String.valueOf(data.getVelocity())) + '\n');
+      //String experiment = path.split("/")[path.split("/").length - 1];
+      //int dk = Integer.parseInt(experiment.split("\\.")[4].split("-")[2]);
+      //int din = Integer.parseInt(experiment.split("\\.")[4].split("-")[1]);
+      //writeWeightsToFile(robot, dk, din, path.replace("best", "weights"));
     }
+    writer.close();
   }
 
   private static Outcome getOutcomeFromSimulation(Robot<?> robot, SnapshotListener listener) {
-    Task<Robot<?>, Outcome> task = new Locomotion(30.0, Locomotion.createTerrain("flat"), new Settings());
+    Task<Robot<?>, Outcome> task = new Locomotion(30.0, Locomotion.createTerrain("hilly-1-10-0"), new Settings());
     return task.apply(robot, listener);
+  }
+
+  private static Outcome getOutcomeFromSimulation(Robot<?> robot) {
+    return getOutcomeFromSimulation(robot, null);
   }
 
   private static String getSerializedFromFile(File file) throws IOException {
@@ -92,6 +99,14 @@ public class SaveWeights {
     writer.write("t;" + String.join(";", IntStream.range(0, weights.length).mapToObj(i -> "w" + i).toArray(String[]::new)) + "\n");
     writer.write(String.join(";", Arrays.stream(weights).mapToObj(String::valueOf).toArray(String[]::new)));
     writer.close();
+  }
+
+  private static void writeActivationsToFile(AttentionListener listener, BufferedWriter writer) throws IOException {
+    int t = 0;
+    for (double[][] activations : listener.getData()) {
+      writer.write(t + ";" + String.join(";", Arrays.stream(activations).flatMapToDouble(Arrays::stream).mapToObj(String::valueOf).toArray(String[]::new)));
+      ++t;
+    }
   }
 
 }
