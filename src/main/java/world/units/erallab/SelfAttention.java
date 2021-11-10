@@ -41,7 +41,7 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
   private final double[] vbias;
 
   private final double[][] attention;
-  private double[][] latentCode;
+  private final double[][] latentCode;
   private final double[][] q;
   private final double[][] k;
   private final double[][] v;
@@ -70,7 +70,7 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     this.kbias = kbias;
     this.vbias = vbias;
     this.attention = new double[n][n];
-    this.latentCode = new double[n][dv];
+    this.latentCode = new double[n][din];
     this.q = new double[n][dk];
     this.k = new double[n][dk];
     this.v = new double[n][dv];
@@ -79,12 +79,6 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
   public SelfAttention(MultiLayerPerceptron inner, int n, int din, int dk, int dv) {
     this(inner, n, din, dk, dv, new double[din][dk], new double[din][dk], new double[din][dv],
             new double[dk], new double[dk], new double[dv]);
-  }
-
-  public static double[][] oneHot(int n, int id) {
-    double[][] vec = new double[n][1];
-    vec[id][0] = 1.0;
-    return vec;
   }
   // TODO: rename
   public static int countParams(int din, int dk, int dv) {
@@ -152,12 +146,7 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     for (double[] row : this.attention) {
       tanh(row);//softmax(row);
     }
-    this.latentCode = this.attention;
-    return this.latentCode;//matrixMult(this.attention, this.v, this.latentCode);
-  }
-
-  public static double[][] positionalEncoding(double[] inputs, double[][] posEmbedding) {
-    return matrixMult(posEmbedding, reshapeVector(inputs, 1, inputs.length));
+    return matrixMult(this.attention, reshaped, this.latentCode);
   }
 
   public static double[][] reshapeVector(double[] v, int p, int n) {
@@ -251,11 +240,10 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     return v;
   }
 
-  public static double[] tanh(double[] v) {
+  public static void tanh(double[] v) {
     for (int i = 0; i < v.length; ++i) {
       v[i] = Math.tanh(v[i]);
     }
-    return v;
   }
 
   public static double[][] matrixDiv(double[][] m, double value) {
@@ -265,11 +253,10 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     return m;
   }
 
-  public static double[] vectorDiv(double[] v, double value) {
+  public static void vectorDiv(double[] v, double value) {
     for (int j = 0; j < v.length; ++j) {
       v[j] /= value;
     }
-    return v;
   }
 
   @Override

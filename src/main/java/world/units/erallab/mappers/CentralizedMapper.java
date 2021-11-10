@@ -24,6 +24,7 @@ public class CentralizedMapper implements Function<List<Double>, Robot<?>>, Geno
   private final int dv;
   private final int nVoxels;
   private final boolean isBaseline;
+  private final boolean isTanh;
 
   public CentralizedMapper(Grid<? extends SensingVoxel> b, String config) {
     this.body = b;
@@ -33,14 +34,15 @@ public class CentralizedMapper implements Function<List<Double>, Robot<?>>, Geno
     this.dv = params[2];
     this.nVoxels = (int) b.count(Objects::nonNull);
     this.isBaseline = config.contains("baseline");
+    this.isTanh = config.contains("tanh");
   }
 
   public Robot<?> apply(List<Double> genotype) {
     if (genotype.size() != this.getGenotypeSize()) {
       throw new IllegalArgumentException(String.format("Wrong genotype size %d instead of %d", genotype.size(), this.getGenotypeSize()));
     }
-    RealFunction function = (this.isBaseline) ? new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, this.nVoxels * this.din, new int[]{this.nVoxels * this.din}, this.nVoxels) : new SelfAttention(new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, this.nVoxels * this.dv, new int[]{}, this.nVoxels),
-            this.nVoxels, this.din, this.dk, this.dv);
+    RealFunction function = (this.isBaseline) ? new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, this.nVoxels * this.din, new int[]{this.nVoxels * this.din}, this.nVoxels) : new SelfAttention(new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, (this.isTanh) ? this.nVoxels * this.din : this.nVoxels * this.dv, new int[]{}, this.nVoxels),
+            this.nVoxels, this.din, this.dk, (this.isTanh) ? this.din : this.dv);
     CentralizedSensing controller = new CentralizedSensing(this.nVoxels * this.din, this.nVoxels, function);
     ((Parametrized) controller.getFunction()).setParams(genotype.stream().mapToDouble(d -> d).toArray());
     return new Robot<>(Controller.step(controller, 0.33), SerializationUtils.clone(body));
