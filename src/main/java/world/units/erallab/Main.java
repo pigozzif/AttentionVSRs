@@ -36,7 +36,6 @@ import java.util.function.Function;
 
 import org.dyn4j.dynamics.Settings;
 import world.units.erallab.mappers.AbstractPartiallyDistributedMapper;
-import world.units.erallab.mappers.CentralizedMapper;
 import world.units.erallab.mappers.GenotypeSized;
 import world.units.erallab.mappers.SelfAttentionPartiallyDistributedMapper;
 
@@ -58,6 +57,7 @@ public class Main extends Worker {
     private static final int nFrequencySamples = 100;
     private static String  bestFileName = "./output/";
     private static Settings physicsSettings;
+    private static double stepSize;
 
     public Main(String[] args) {
         super(args);
@@ -73,8 +73,9 @@ public class Main extends Worker {
         shape = this.a("shape", null);
         config = this.a("config", null);
         exp = this.a("exp", null);
-        terrain = "hilly-1-10-rnd";
-        sensorConfig = "uniform-a+vxy+t-0.01";
+        stepSize = Double.parseDouble(this.a("step", "0.35"));
+        terrain = this.a("terrain", "hilly-1-10-rnd");
+        sensorConfig = this.a("sensors", "uniform-a+vxy+t-0.01");
         episodeTime = 30.0D;
         nEvals = 30000;
         physicsSettings = new Settings();
@@ -97,9 +98,10 @@ public class Main extends Worker {
             Stopwatch stopwatch = Stopwatch.createStarted();
             L.info(String.format("Starting %s", bestFileName));
             Collection<Robot<?>> solutions = switch (evolverName) {
+                case "cmaes" -> this.evolveCMAES(factory, mapper, trainingTask);
                 case "es" -> this.evolveES(factory, mapper, trainingTask);
                 case "ga" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new GaussianMutation(0.35D), 0.2D, new GeometricCrossover(Range.closed(-0.5D, 1.5D)).andThen(new GaussianMutation(0.1D)), 0.8D));
-                case "ga-mut" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new GaussianMutation(0.35D), 1.0D));
+                case "ga-mut" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new GaussianMutation(stepSize), 1.0D));
                 case "ga-mod-mut" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new ModuleGaussianMutation(0.35D, ((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()), 1.0));
                 case "ga-mix-cx" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new ModuleCrossover(((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()).andThen(new GaussianMutation(0.1D)), 8.0D, new GaussianMutation(0.35D), 0.2D));
                 default -> throw new IllegalStateException(String.format("Evolver not known: %s", evolverName));
@@ -112,18 +114,23 @@ public class Main extends Worker {
         }
     }
 
+    private Collection<Robot<?>> evolveCMAES(IndependentFactory<List<Double>> factory, Function<List<Double>, Robot<?>> mapper, Function<Robot<?>, Outcome> trainingTask) throws ExecutionException, InterruptedException {
+        Evolver<List<Double>, Robot<?>, Outcome> evolver = new CMAESEvolver<>(mapper, factory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()));
+        return evolver.solve(trainingTask, new FitnessEvaluations(nEvals), new Random(seed), this.executorService, createListenerFactory().build());
+    }
+
     private Collection<Robot<?>> evolveES(IndependentFactory<List<Double>> factory, Function<List<Double>, Robot<?>> mapper, Function<Robot<?>, Outcome> trainingTask) throws ExecutionException, InterruptedException {
         Evolver<List<Double>, Robot<?>, Outcome> evolver = new BasicEvolutionaryStrategy<>(mapper, factory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()), 0.35D, 40, 10, 1, true);
         return evolver.solve(trainingTask, new FitnessEvaluations(nEvals), new Random(seed), this.executorService, createListenerFactory().build());
     }
 
     private Collection<Robot<?>> evolveGA(IndependentFactory<List<Double>> factory, Function<List<Double>, Robot<?>> mapper, Function<Robot<?>, Outcome> trainingTask, Map<GeneticOperator<List<Double>>, Double> operatorMap) throws ExecutionException, InterruptedException {
-        Evolver<List<Double>, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, factory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()), 100, operatorMap, new Tournament(5), new Worst(), 100, true, true);
+        Evolver<List<Double>, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, factory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()), 100, operatorMap, new Tournament(5), new Worst(), 100, true, !terrain.contains("flat"));
         return evolver.solve(trainingTask, new FitnessEvaluations(nEvals), new Random(seed), this.executorService, createListenerFactory().build());
     }
 
     private Listener.Factory<Event<?, ? extends Robot<?>, ? extends Outcome>> createListenerFactory() {
-        Function<Outcome, Double> fitnessFunction = Outcome::getDistance;
+        Function<Outcome, Double> fitnessFunction = Outcome::getVelocity;
         // consumers
         List<NamedFunction<Event<?, ? extends Robot<?>, ? extends Outcome>, ?>> basicFunctions = AuxUtils.basicFunctions();
         List<NamedFunction<Event<?, ? extends Robot<?>, ? extends Outcome>, ?>> populationFunctions = AuxUtils.populationFunctions(fitnessFunction);

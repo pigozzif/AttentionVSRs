@@ -38,6 +38,9 @@ public abstract class AbstractPartiallyDistributedMapper<T extends RealFunction 
         if (genotype.size() != this.getGenotypeSize()) {
             throw new IllegalArgumentException(String.format("Wrong genotype size %d instead of %d", genotype.size(), this.getGenotypeSize()));
         }
+        for (int i = 0; i < genotype.size(); ++i) {
+            genotype.set(i, genotype.get(i) * 0.8);
+        }
         PartiallyDistributedSensing controller = new PartiallyDistributedSensing(this.body, this.signals, this.neighborConfig, this.nNeighbors);
         int num = 0;
         for (Grid.Entry<? extends SensingVoxel> entry : this.body) {

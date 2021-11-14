@@ -27,6 +27,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.util.Pair;
 import world.units.erallab.mappers.AbstractPartiallyDistributedMapper;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.BiFunction;
@@ -76,6 +77,11 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
 
     private final Grid<double[]> currSignalsGrid;
 
+    private Grid<Double> outputGrid;
+    private static final int nMessageBins = 25;
+    private int[] nMessages;
+    private double lastT = Double.NEGATIVE_INFINITY;
+
     public static int inputs(SensingVoxel voxel, int nNeighbors) {
         return nNeighbors + voxel.getSensors().stream().mapToInt(s -> s.getDomains().length).sum();
     }
@@ -94,6 +100,8 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
         this.currSignalsGrid = Grid.create(functions, f -> new double[signals]);
         this.config = config;
         this.neighborhood = AbstractPartiallyDistributedMapper.getNeighborhood(config);
+        this.outputGrid = null;
+        this.nMessages = new int[nMessageBins];
         this.reset();
     }
 
@@ -143,11 +151,18 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
                 ((Resettable) f).reset();
             }
         });
+        this.outputGrid = null;
+        this.nMessages = new int[nMessageBins];
     }
 
     @Override
     public Grid<Double> computeControlSignals(double t, Grid<? extends SensingVoxel> voxels) {
-        Grid<Double> outputGrid = Grid.create(voxels.getW(), voxels.getH(), (x, y) -> 0.0);
+        if (this.outputGrid == null) {
+            this.outputGrid = Grid.create(voxels, v -> 0.0);
+        }
+        else if (t - this.lastT < 0.33) {
+            return this.outputGrid;
+        }
         int i = 0;
         for (Grid.Entry<? extends SensingVoxel> entry : voxels) {
             if (entry.getValue() == null) {
@@ -155,13 +170,14 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
             }
             //get inputs
             double[] signals = this.getLastSignals(entry.getX(), entry.getY(), voxels);
-            //signals = Arrays.stream(signals).map(d -> (d > 0) ? 1.0D : -1.0D).toArray();
+            //double[] scaledSignals = Arrays.stream(signals).map(d -> (d + 1.0) / 2.0).toArray();
+            this.updateBins(signals);
             double[] inputs = ArrayUtils.addAll(entry.getValue().getSensorReadings(), signals);
             //compute outputs
             TimedRealFunction function = this.functions.get(entry.getX(), entry.getY());
             double[] outputs = function != null ? function.apply(t, positionalEncoding(inputs, (int) voxels.count(Objects::nonNull), i++)) : new double[this.nOfOutputs(entry.getX(), entry.getY())];
             //apply outputs
-            outputGrid.set(entry.getX(), entry.getY(), outputs[0]);
+            this.outputGrid.set(entry.getX(), entry.getY(), outputs[0]);
             System.arraycopy(outputs, 1, this.currSignalsGrid.get(entry.getX(), entry.getY()), 0, this.nOfOutputs(entry.getX(), entry.getY()) - 1);
         }
         for (Grid.Entry<? extends SensingVoxel>  entry : voxels) {
@@ -172,7 +188,29 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
             int y = entry.getY();
             System.arraycopy(this.currSignalsGrid.get(x, y), 0,  this.lastSignalsGrid.get(x, y), 0, this.nOfOutputs(x, y) - 1);
         }
-        return outputGrid;
+        this.lastT = t;
+        return this.outputGrid;
+    }
+
+    private void updateBins(double[] signals) {
+        double step = 2.0 / nMessageBins;
+        for (double signal : signals) {
+            for (int i = 1; i <= nMessageBins; ++i) {
+                if (signal <= (step * i) - 1.0) {
+                    this.nMessages[i - 1] += 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    public double getUniformity() {
+        double l2 = 0.0;
+        int sum = Arrays.stream(this.nMessages).sum();
+        for (int bin : this.nMessages) {
+            l2 += Math.pow((double) bin / sum, 2);
+        }
+        return ((Math.sqrt(l2) * Math.sqrt(nMessageBins)) - 1) / (Math.sqrt(nMessageBins) - 1);
     }
 
     public static double[] positionalEncoding(double[] inputs, int n, int i) {

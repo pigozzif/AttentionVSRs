@@ -16,7 +16,10 @@
 
 package world.units.erallab;
 
+import it.units.erallab.hmsrobots.core.controllers.AbstractController;
+import it.units.erallab.hmsrobots.core.controllers.StepController;
 import it.units.erallab.hmsrobots.core.objects.Robot;
+import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
 import it.units.erallab.hmsrobots.tasks.locomotion.Outcome;
 import it.units.erallab.hmsrobots.util.Grid;
 import it.units.erallab.hmsrobots.util.SerializationUtils;
@@ -72,7 +75,16 @@ public class AuxUtils {
                         .of(solution()),
                 size.reformat("%5d"),
                 genotypeBirthIteration(),
-                f("fitness", "%5.1f", fitnessFunction).of(fitness())
+                f("fitness", "%5.1f", fitnessFunction).of(fitness()),
+                f("uniformity", "%5.1f", s -> {
+                  AbstractController<? extends SensingVoxel> c = ((StepController) ((Robot<?>) s).getController()).getInnerController();
+                  if (c instanceof PartiallyDistributedSensing) {
+                    return ((PartiallyDistributedSensing) c).getUniformity();
+                  }
+                  else {
+                    return -1.0;
+                  }
+                }).of(solution())
         );
     }
 
