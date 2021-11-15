@@ -124,13 +124,10 @@ public class AttentionDrawer implements Drawer {
   }
 
   private void drawAttention(BoundingBox attentionBB, Graphics2D graphics2D) {
-    int attentionSize = (int) this.body.count(e -> e);
     double minX = attentionBB.min.x;
     double wX = attentionBB.width();
     double voxelSizeX = wX / this.body.getW();
     double minY = attentionBB.min.y;
-    double cellX = voxelSizeX / attentionSize;
-    double cellY = voxelSizeX / attentionSize;
     double max = Double.MIN_VALUE;
     double min = Double.MAX_VALUE;
     for (int i = 0; i < this.body.getW(); ++i) {
@@ -154,8 +151,10 @@ public class AttentionDrawer implements Drawer {
         graphics2D.setColor(this.axesColor);
         graphics2D.draw(new Rectangle2D.Double(startX, startY, voxelSizeX, voxelSizeX));
         double[][] attention = this.attentionGrid.get(i, j);
-        for (int n = 0; n < attentionSize; ++n) {
-          for (int m = 0; m < attentionSize; ++m) {
+        for (int n = 0; n < attention.length; ++n) {
+          for (int m = 0; m < attention[n].length; ++m) {
+            double cellX = voxelSizeX / attention.length;
+            double cellY = voxelSizeX / attention[n].length;
             graphics2D.setColor(DrawingUtils.linear(this.minColor, this.zeroColor, this.maxColor, (float) min, 0, (float) max, (float) attention[n][m]));
             graphics2D.fill(new Rectangle2D.Double(startX + cellX * n, startY + cellY * m, cellX, cellY));
           }

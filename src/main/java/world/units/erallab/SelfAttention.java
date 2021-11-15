@@ -73,7 +73,7 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     this.latentCode = new double[din][n];
     this.q = new double[din][dk];
     this.k = new double[din][dk];
-    this.v = new double[n][dv];
+    this.v = new double[din][dv];
   }
 
   public SelfAttention(MultiLayerPerceptron inner, int n, int din, int dk, int dv) {
@@ -149,7 +149,7 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     }
     linearTransform(originalInputs, this.wq, this.qbias, this.q);
     double[][] keys = matrixTranspose(linearTransform(originalInputs, this.wk, this.kbias, this.k));
-    //linearTransform(reshaped, this.wv, this.vbias, this.v);
+    //linearTransform(matrixTranspose(reshaped), this.wv, this.vbias, this.v);
     matrixMult(this.q, keys, this.attention);
     matrixDiv(this.attention, Math.sqrt(this.dk));
     for (double[] row : this.attention) {

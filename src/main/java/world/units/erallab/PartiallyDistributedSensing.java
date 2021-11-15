@@ -160,9 +160,9 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
         if (this.outputGrid == null) {
             this.outputGrid = Grid.create(voxels, v -> 0.0);
         }
-        /*else if (t - this.lastT < 0.33) {
-            return this.outputGrid;
-        }*/
+        //else if (t - this.lastT < 0.33) {
+        //    return this.outputGrid;
+        //}
         int i = 0;
         for (Grid.Entry<? extends SensingVoxel> entry : voxels) {
             if (entry.getValue() == null) {

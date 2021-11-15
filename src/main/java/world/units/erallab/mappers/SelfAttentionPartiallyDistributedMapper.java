@@ -39,7 +39,7 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
   @Override
   public SelfAttention getFunction(PartiallyDistributedSensing controller, Grid.Entry<? extends SensingVoxel> entry) {
     int nVoxels = (int) this.body.count(Objects::nonNull);
-    int mlpInput = (this.isTanh) ? nVoxels * this.din : nVoxels * this.dv;
+    int mlpInput = (this.isTanh) ? nVoxels * this.din : this.din * this.dv;
     return new SelfAttention(new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, mlpInput, new int[]{}, controller.nOfOutputs(entry.getX(), entry.getY())),
               nVoxels, this.din, this.dk, this.dv);
   }
@@ -76,7 +76,7 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
   }
 
   public int getAttentionSizeForVoxel() {
-    return SelfAttention.countParams(this.din, this.dk, this.dv, this.nNeighbors);
+    return SelfAttention.countParams(this.din, this.dk, this.dv, (int) this.body.count(Objects::nonNull));
   }
 
   public int getDownstreamSizeForVoxel() {
@@ -86,7 +86,7 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
       if (entry.getValue() == null) {
         continue;
       }
-      int inputs = (this.isTanh) ? nVoxels * this.din : nVoxels * this.dv;
+      int inputs = (this.isTanh) ? nVoxels * this.din : this.din * this.dv;
       sumDownstream += MultiLayerPerceptron.countWeights(MultiLayerPerceptron.countNeurons(inputs, new int[]{}, this.neighborConfig.contains("none") ? 1 : 2));
       break;
     }
