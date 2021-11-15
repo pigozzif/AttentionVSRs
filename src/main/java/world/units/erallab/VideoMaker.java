@@ -54,7 +54,7 @@ public class VideoMaker {
         String seed = inputFileName.split("/")[numDirs - 1].split("\\.")[2];
         String outputFileName = a(args, "output", null);
         String serializedRobotColumn = a(args, "serializedRobotColumnName", "serialized");
-        String terrainName = a(args, "terrain", "flat");//""hilly-1-10-" + 1);
+        String terrainName = a(args, "terrain", "hilly-1-10-" + seed);
         String transformationName = a(args, "transformation", "identity");
         double startTime = d(a(args, "startTime", "0.0"));
         double endTime = d(a(args, "endTime", "30.0"));

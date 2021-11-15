@@ -69,23 +69,23 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     this.qbias = qbias;
     this.kbias = kbias;
     this.vbias = vbias;
-    this.attention = new double[n][n];
-    this.latentCode = new double[n][din];
-    this.q = new double[n][dk];
-    this.k = new double[n][dk];
+    this.attention = new double[din][din];
+    this.latentCode = new double[din][n];
+    this.q = new double[din][dk];
+    this.k = new double[din][dk];
     this.v = new double[n][dv];
   }
 
   public SelfAttention(MultiLayerPerceptron inner, int n, int din, int dk, int dv) {
-    this(inner, n, din, dk, dv, new double[din][dk], new double[din][dk], new double[din][dv],
+    this(inner, n, din, dk, dv, new double[1][dk], new double[1][dk], new double[n][dv],
             new double[dk], new double[dk], new double[dv]);
   }
   // TODO: rename
-  public static int countParams(int din, int dk, int dv) {
-    return (din * dk) + dk + (din * dk) + dk + (din * dv) + dv;
+  public static int countParams(int din, int dk, int dv, int n) {
+    return (1 * dk) + dk + (1 * dk) + dk + (n * dv) + dv;
   }
 
-  public int countParams() { return countParams(this.din, this.dk, this.dv); }
+  public int countParams() { return countParams(this.din, this.dk, this.dv, this.n); }
 
   public double[] getAttentionParams() { return concat(flat(this.wq), flat(this.wk), flat(this.wv), this.qbias, this.kbias, this.vbias); }
 
@@ -96,20 +96,20 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
 
   public void setAttentionParams(double[] params) {
     int s = 0;
-    for (int i = 0; i < this.din; ++i) {
-      System.arraycopy(params, s, this.wq[i], 0, this.dk);
+    for (double[] row : this.wq) {
+      System.arraycopy(params, s, row, 0, this.dk);
       s = s + this.dk;
     }
     System.arraycopy(params, s, this.qbias, 0, this.dk);
     s = s + this.dk;
-    for (int i = 0; i < this.din; ++i) {
-      System.arraycopy(params, s, this.wk[i], 0, this.dk);
+    for (double[] row : this.wk) {
+      System.arraycopy(params, s, row, 0, this.dk);
       s = s + this.dk;
     }
     System.arraycopy(params, s, this.kbias, 0, this.dk);
     s = s + this.dk;
-    for (int i = 0; i < this.din; ++i) {
-      System.arraycopy(params, s, this.wv[i], 0, this.dv);
+    for (double[] row : this.wv) {
+      System.arraycopy(params, s, row, 0, this.dv);
       s = s + this.dv;
     }
     System.arraycopy(params, s, this.vbias, 0, this.dv);
@@ -119,8 +119,8 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
 
   @Override
   public void setParams(double[] params) {
-    this.setAttentionParams(Arrays.stream(params).limit(countParams(this.din, this.dk, this.dv)).toArray());
-    this.setDownstreamParams(Arrays.stream(params).skip(countParams(this.din, this.dk, this.dv)).toArray());
+    this.setAttentionParams(Arrays.stream(params).limit(countParams(this.din, this.dk, this.dv, this.n)).toArray());
+    this.setDownstreamParams(Arrays.stream(params).skip(countParams(this.din, this.dk, this.dv, this.n)).toArray());
   }
 
   public static double[] concat(double[]... arrays) {
@@ -138,15 +138,24 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
 
   public double[][] applyAttention(double[] inputs) {
     double[][] reshaped = reshapeVector(inputs, this.n, this.din);
-    linearTransform(reshaped, this.wq, this.qbias, this.q);
-    double[][] keys = matrixTranspose(linearTransform(reshaped, this.wk, this.kbias, this.k));
+    double[][] originalInputs = new double[this.din][1];
+    for (double[] row : reshaped) {
+      if (!Arrays.stream(row).allMatch(d -> d == 0.0)) {
+        for (int j = 0; j < row.length; ++j) {
+          originalInputs[j][0] = row[j];
+        }
+        break;
+      }
+    }
+    linearTransform(originalInputs, this.wq, this.qbias, this.q);
+    double[][] keys = matrixTranspose(linearTransform(originalInputs, this.wk, this.kbias, this.k));
     //linearTransform(reshaped, this.wv, this.vbias, this.v);
     matrixMult(this.q, keys, this.attention);
     matrixDiv(this.attention, Math.sqrt(this.dk));
     for (double[] row : this.attention) {
       tanh(row);//softmax(row);
     }
-    return matrixMult(this.attention, reshaped, this.latentCode);
+    return matrixMult(this.attention, matrixTranspose(reshaped), this.latentCode);
   }
 
   public static double[][] reshapeVector(double[] v, int p, int n) {

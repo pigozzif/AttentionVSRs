@@ -76,7 +76,7 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
   }
 
   public int getAttentionSizeForVoxel() {
-    return SelfAttention.countParams(this.din, this.dk, this.dv);
+    return SelfAttention.countParams(this.din, this.dk, this.dv, this.nNeighbors);
   }
 
   public int getDownstreamSizeForVoxel() {
