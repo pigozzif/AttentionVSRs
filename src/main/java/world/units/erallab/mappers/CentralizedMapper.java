@@ -49,7 +49,7 @@ public class CentralizedMapper implements Function<List<Double>, Robot<?>>, Geno
   }
 
   public int getAttentionSizeForVoxel() {
-    return SelfAttention.countParams(this.din, this.dk, this.dv);
+    return SelfAttention.countParams(this.din, this.dk, this.dv, this.nVoxels);
   }
 
   @Override

@@ -22,7 +22,7 @@ public class ModuleGaussianMutation implements Mutation<List<Double>> {
   public List<Double> mutate(List<Double> parent, Random random) {
     List<Double> newBorn = new ArrayList<>();
     int start, end;
-    if (random.nextDouble() < 0.5) {
+    if (random.nextDouble() < 0.0) {
       start = 0;
       end = this.numAttention;
       newBorn = this.innerMutation.mutate(parent.subList(start, end), random);
