@@ -139,10 +139,11 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
   public double[][] applyAttention(double[] inputs) {
     double[][] reshaped = reshapeVector(inputs, this.n, this.din);
     double[][] originalInputs = new double[this.din][1];
-    for (double[] row : reshaped) {
-      if (!Arrays.stream(row).allMatch(d -> d == 0.0)) {
-        for (int j = 0; j < row.length; ++j) {
-          originalInputs[j][0] = row[j];
+    int k;
+    for (k = 0; k < reshaped.length; ++k) {
+      if (!Arrays.stream(reshaped[k]).allMatch(d -> d == 0.0)) {
+        for (int j = 0; j < reshaped[k].length; ++j) {
+          originalInputs[j][0] = reshaped[k][j];
         }
         break;
       }
@@ -155,7 +156,9 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     for (double[] row : this.attention) {
       tanh(row);//softmax(row);
     }
-    return matrixMult(this.attention, matrixTranspose(reshaped), this.latentCode);
+    matrixMult(this.attention, matrixTranspose(reshaped), this.latentCode);
+    //matrixDiv(this.latentCode, Math.sqrt(this.din));
+    return this.latentCode;
   }
 
   public static double[][] reshapeVector(double[] v, int p, int n) {
