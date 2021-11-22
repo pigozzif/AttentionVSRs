@@ -13,12 +13,10 @@ import java.util.Objects;
 public class MLPPartiallyDistributedMapper extends AbstractPartiallyDistributedMapper<MultiLayerPerceptron> {
 
   private final String distribution;
-  private final boolean isNopos;
 
   public MLPPartiallyDistributedMapper(Grid<? extends SensingVoxel> b, String config) {
     super(b, (config.contains("none")) ? 0 : 1, config.split("-")[0]);
     this.distribution = config.split("-")[1];
-    this.isNopos = config.contains("nopos");
     if (!(this.distribution.equals("homo") || this.distribution.equals("hetero"))) {
       throw new IllegalArgumentException(String.format("Distribution model not known: %s", this.distribution));
     }
@@ -52,7 +50,7 @@ public class MLPPartiallyDistributedMapper extends AbstractPartiallyDistributedM
       if (entry.getValue() == null) {
         continue;
       }
-      int inputs = PartiallyDistributedSensing.inputs(entry.getValue(), this.nNeighbors) * ((this.isNopos) ? 1 : (int) this.body.count(Objects::nonNull));
+      int inputs = PartiallyDistributedSensing.inputs(entry.getValue(), this.nNeighbors) * (int) this.body.count(Objects::nonNull);
       sum += MultiLayerPerceptron.countWeights(MultiLayerPerceptron.countNeurons(inputs, new int[]{}, (this.neighborConfig.contains("none") ? 1 : 2)));
       break;
     }

@@ -75,7 +75,7 @@ public class Main extends Worker {
     exp = this.a("exp", null);
     stepSize = Double.parseDouble(this.a("step", "0.35"));
     terrain = this.a("terrain", "hilly-1-10-rnd");
-    sensorConfig = this.a("sensors", "uniform-a+vxy+t+px+py-0.01");
+    sensorConfig = this.a("sensors", "uniform-a+vxy+t-0.01");
     episodeTime = 30.0D;
     nEvals = 30000;
     physicsSettings = new Settings();
