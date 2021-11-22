@@ -77,13 +77,13 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
 
   private final Grid<double[]> currSignalsGrid;
 
-  private Grid<Double> outputGrid;
+  private final Grid<Double> outputGrid;
   private static final int nMessageBins = 25;
   private int[] nMessages;
   private double lastT = Double.NEGATIVE_INFINITY;
 
   public static int inputs(SensingVoxel voxel, int nNeighbors) {
-    return nNeighbors + voxel.getSensors().stream().mapToInt(s -> s.getDomains().length).sum();
+    return nNeighbors + voxel.getSensors().stream().mapToInt(s -> s.getDomains().length).sum() + 1;
   }
 
   @JsonCreator
@@ -108,7 +108,7 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
   public PartiallyDistributedSensing(Grid<? extends SensingVoxel> voxels, int signals, String config, int nNeighbors) {
     this(
             signals,
-            Grid.create(voxels.getW(), voxels.getH(), (x, y) -> voxels.get(x, y) == null ? 0 : inputs(voxels.get(x, y), nNeighbors) * (int) voxels.count(Objects::nonNull)),
+            Grid.create(voxels.getW(), voxels.getH(), (x, y) -> voxels.get(x, y) == null ? 0 : inputs(voxels.get(x, y), nNeighbors)),// * (int) voxels.count(Objects::nonNull)),
             Grid.create(
                     voxels.getW(),
                     voxels.getH(),
@@ -165,6 +165,9 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
     //  return this.outputGrid;
     //}
     int i = 0;
+    int centerOfMassX = (int) Math.ceil((double) voxels.getW() / 2);
+    int centerOfMassY = (int) Math.ceil((double) voxels.getH() / 2);
+    double maxDistance = Math.abs(centerOfMassX) + Math.abs(centerOfMassY);
     for (Grid.Entry<? extends SensingVoxel> entry : voxels) {
       if (entry.getValue() == null) {
         continue;
@@ -172,10 +175,12 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
       //get inputs
       double[] signals = this.getLastSignals(entry.getX(), entry.getY(), voxels);
       this.updateBins(signals);
-      double[] inputs = ArrayUtils.addAll(entry.getValue().getSensorReadings(), signals);
+      double[] inputs = entry.getValue().getSensorReadings();
+      inputs = ArrayUtils.add(inputs, (Math.abs(entry.getX() - centerOfMassX) + Math.abs(entry.getY() - centerOfMassY)) / maxDistance);
+      inputs = ArrayUtils.addAll(inputs, signals);
       //compute outputs
       TimedRealFunction function = this.functions.get(entry.getX(), entry.getY());
-      double[] outputs = function != null ? function.apply(t, positionalEncoding(inputs, (int) voxels.count(Objects::nonNull), i++)) : new double[this.nOfOutputs(entry.getX(), entry.getY())];
+      double[] outputs = function != null ? function.apply(t, inputs /*positionalEncoding(inputs, (int) voxels.count(Objects::nonNull), i++)*/) : new double[this.nOfOutputs(entry.getX(), entry.getY())];
       //apply outputs
       this.outputGrid.set(entry.getX(), entry.getY(), outputs[0]);
       System.arraycopy(outputs, 1, this.currSignalsGrid.get(entry.getX(), entry.getY()), 0, this.nOfOutputs(entry.getX(), entry.getY()) - 1);

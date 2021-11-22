@@ -70,7 +70,7 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     this.kbias = kbias;
     this.vbias = vbias;
     this.attention = new double[din][din];
-    this.latentCode = new double[din][n];
+    this.latentCode = new double[din][1];
     this.q = new double[din][dk];
     this.k = new double[din][dk];
     this.v = new double[din][dv];
@@ -137,8 +137,8 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
   }
 
   public double[][] applyAttention(double[] inputs) {
-    double[][] reshaped = reshapeVector(inputs, this.n, this.din);
-    double[][] originalInputs = new double[this.din][1];
+    double[][] reshaped = reshapeVector(inputs, 1, this.din);
+    /*double[][] originalInputs = new double[this.din][1];
     int k;
     for (k = 0; k < reshaped.length; ++k) {
       if (!Arrays.stream(reshaped[k]).allMatch(d -> d == 0.0)) {
@@ -147,9 +147,9 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
         }
         break;
       }
-    }
-    linearTransform(originalInputs, this.wq, this.qbias, this.q);
-    double[][] keys = matrixTranspose(linearTransform(originalInputs, this.wk, this.kbias, this.k));
+    }*/
+    linearTransform(reshaped, this.wq, this.qbias, this.q);
+    double[][] keys = matrixTranspose(linearTransform(reshaped, this.wk, this.kbias, this.k));
     //linearTransform(matrixTranspose(reshaped), this.wv, this.vbias, this.v);
     matrixMult(this.q, keys, this.attention);
     matrixDiv(this.attention, Math.sqrt(this.dk));

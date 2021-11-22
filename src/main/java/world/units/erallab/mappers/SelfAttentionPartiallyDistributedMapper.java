@@ -17,6 +17,7 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
   private final int dv;
   private final String distribution;
   private final boolean isTanh;
+  private final boolean isNopos;
 
   public SelfAttentionPartiallyDistributedMapper(Grid<? extends SensingVoxel> b, String config) {
     super(b, config.contains("none") ? 0 : 1, config.split("-")[0]);
@@ -26,6 +27,7 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
     this.dv = params[2];
     this.distribution = config.split("-")[4];
     this.isTanh = config.contains("tanh");
+    this.isNopos = config.contains("nopos");
     if (!(this.distribution.equals("homo|homo") || this.distribution.equals("hetero|homo") || this.distribution.equals("homo|hetero") || this.distribution.equals("hetero|hetero"))) {
       throw new IllegalArgumentException(String.format("Distribution model not known: %s", this.distribution));
     }
@@ -39,7 +41,16 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
   @Override
   public SelfAttention getFunction(PartiallyDistributedSensing controller, Grid.Entry<? extends SensingVoxel> entry) {
     int nVoxels = (int) this.body.count(Objects::nonNull);
-    int mlpInput = (this.isTanh) ? nVoxels * this.din : this.din * this.dv;
+    int mlpInput;
+    if (this.isNopos) {
+      mlpInput = this.din;
+    }
+    else if (this.isTanh) {
+      mlpInput = nVoxels * this.din;
+    }
+    else {
+      mlpInput = this.din * this.dv;
+    }
     return new SelfAttention(new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, mlpInput, new int[]{}, controller.nOfOutputs(entry.getX(), entry.getY())),
               nVoxels, this.din, this.dk, this.dv);
   }
@@ -86,7 +97,16 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
       if (entry.getValue() == null) {
         continue;
       }
-      int inputs = (this.isTanh) ? nVoxels * this.din : this.din * this.dv;
+      int inputs;
+      if (this.isNopos) {
+        inputs = this.din;
+      }
+      else if (this.isTanh) {
+        inputs = nVoxels * this.din;
+      }
+      else {
+        inputs = this.din * this.dv;
+      }
       sumDownstream += MultiLayerPerceptron.countWeights(MultiLayerPerceptron.countNeurons(inputs, new int[]{}, this.neighborConfig.contains("none") ? 1 : 2));
       break;
     }
