@@ -40,11 +40,12 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
   @JsonProperty
   private final double[] vbias;
 
-  private final double[][] attention;
+  private double[][] attention;
   private final double[][] latentCode;
   private final double[][] q;
   private final double[][] k;
   private final double[][] v;
+  private boolean freeze;
 
   @JsonCreator
   public SelfAttention(@JsonProperty("inner") MultiLayerPerceptron inner,
@@ -74,6 +75,7 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     this.q = new double[din][dk];
     this.k = new double[din][dk];
     this.v = new double[din][dv];
+    this.freeze = false;
   }
 
   public SelfAttention(MultiLayerPerceptron inner, int n, int din, int dk, int dv) {
@@ -148,13 +150,15 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
         break;
       }
     }
-    linearTransform(originalInputs, this.wq, this.qbias, this.q);
-    double[][] keys = matrixTranspose(linearTransform(originalInputs, this.wk, this.kbias, this.k));
-    //linearTransform(matrixTranspose(reshaped), this.wv, this.vbias, this.v);
-    matrixMult(this.q, keys, this.attention);
-    matrixDiv(this.attention, Math.sqrt(this.dk));
-    for (double[] row : this.attention) {
-      tanh(row);//softmax(row);
+    if (!this.freeze) {
+      linearTransform(originalInputs, this.wq, this.qbias, this.q);
+      double[][] keys = matrixTranspose(linearTransform(originalInputs, this.wk, this.kbias, this.k));
+      //linearTransform(matrixTranspose(reshaped), this.wv, this.vbias, this.v);
+      matrixMult(this.q, keys, this.attention);
+      matrixDiv(this.attention, Math.sqrt(this.dk));
+      for (double[] row : this.attention) {
+        tanh(row);//softmax(row);
+      }
     }
     matrixMult(this.attention, matrixTranspose(reshaped), this.latentCode);
     //matrixDiv(this.latentCode, Math.sqrt(this.din));
@@ -182,6 +186,16 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
       System.arraycopy(input[i], 0, flattened, i * dim, dim);
     }
     return flattened;
+  }
+
+  public void freeze() {
+    this.freeze = true;
+  }
+
+  public double[][] getAttention() { return this.attention; }
+
+  public void setAttention(double[][] attention) {
+    this.attention = attention;
   }
 
   @Override

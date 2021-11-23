@@ -22,11 +22,11 @@ public class SurrogateValidator {
           "steppy-1-10-0", "steppy-1-10-1", "steppy-1-10-2", "steppy-1-10-3", "steppy-1-10-4", "uphill-10", "uphill-20", "downhill-10", "downhill-20"};
   private static final String[] header = {"validation.terrain", "validation.transformation", "validation.seed",
           "outcome.computation.time", "outcome.distance", "outcome.velocity", "\n"};
-  private static final String dir = /*System.getProperty("user.dir") + "/output/";*/ "/Users/federicopigozzi/Desktop/neumann-no_step-cx/";
+  private static final String dir = /*System.getProperty("user.dir") + "/output/";*/ "/Users/federicopigozzi/Desktop/output/";
 
   public static void main(String[] args) throws IOException {
     for (File file : Objects.requireNonNull(new File(dir).listFiles())) {
-      if (file.getPath().contains("best") && file.getPath().contains("baseline")) {
+      if (file.getPath().contains("best")) {
         //System.out.println(file.getPath());
         validateAndwriteOnFile(file);
       }
