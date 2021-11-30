@@ -27,7 +27,7 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
     this.dv = params[2];
     this.distribution = config.split("-")[4];
     this.isTanh = config.contains("tanh");
-    this.steps = (config.split("-").length >= 5) ? Integer.parseInt(config.split("-")[6]) : 1;
+    this.steps = (config.split("-").length >= 7) ? Integer.parseInt(config.split("-")[6]) : 1;
     if (!(this.distribution.equals("homo|homo") || this.distribution.equals("hetero|homo") || this.distribution.equals("homo|hetero") || this.distribution.equals("hetero|hetero"))) {
       throw new IllegalArgumentException(String.format("Distribution model not known: %s", this.distribution));
     }

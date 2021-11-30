@@ -184,10 +184,16 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
       inputs = ArrayUtils.addAll(inputs, signals);
       //compute outputs
       TimedRealFunction function = this.functions.get(entry.getX(), entry.getY());
-      if (function instanceof SelfAttention) {
-        ((SelfAttention) function).setId(i);
+      //if (function instanceof SelfAttention) {
+      //  ((SelfAttention) function).setId(i);
+      //}
+      double[] processedInputs;
+      if (this.downsamplingScale == 1) {
+        processedInputs = positionalEncoding(inputs, nVoxels, i++);
       }
-      double[] processedInputs = positionalEncoding(inputs, nVoxels, i++);//, nVoxels, this.originalVoxels, this.downsamplingScale);
+      else {
+        processedInputs = downsample(positionalEncoding(inputs, nVoxels, i++), nVoxels, this.originalVoxels, this.downsamplingScale);
+      }
       double[] outputs = function != null ? function.apply(t, processedInputs) : new double[this.nOfOutputs(entry.getX(), entry.getY())];
       //apply outputs
       this.outputGrid.set(entry.getX(), entry.getY(), outputs[0]);
@@ -259,18 +265,20 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
 
   private static double[] downsample(double[] inputs, int n, int originalN, int scale) {
     int dim = inputs.length / n;
-    double[] output = new double[originalN * dim];
+    double[][] reshaped = SelfAttention.reshapeVector(inputs, n, dim);
+    double[][] output = new double[originalN][dim];
     int k = 0;
     for (int i = 0; i < originalN; ++i) {
       for (int j = 0; j < dim; ++j) {
-        for (int p = 0; p < scale && j + p < dim; ++p) {
-          output[i * dim + j] += inputs[k * dim + j + p];
+        for (int p = 0; p < scale && k + p < n; ++p) {
+          //output[i][j] += reshaped[k + p][j];
+          output[i][j] = (Math.abs(output[i][j]) > Math.abs(reshaped[k + p][j])) ? output[i][j] : reshaped[k + p][j];
         }
-        output[i * dim + j] /= scale;
+        //output[i][j] /= scale;
       }
       k += scale;
     }
-    return output;
+    return SelfAttention.flat(output);
   }
 
   public int nOfInputs(int x, int y) {

@@ -148,7 +148,14 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
 
   public double[][] applyAttention(double[] inputs) {
     double[][] reshaped = reshapeVector(inputs, this.n, this.din);
-    double[][] originalInputs = reshapeVector(reshaped[this.id], this.din, 1);
+    int k = 0;
+    for (int i = 0; i < this.n; ++i) {
+      if (Arrays.stream(reshaped[i]).anyMatch(v -> v != 0.0)) {
+        k = i;
+        break;
+      }
+    }
+    double[][] originalInputs = reshapeVector(reshaped[k], this.din, 1);
     if (!this.freeze) {
       linearTransform(originalInputs, this.wq, this.qbias, this.q);
       double[][] keys = matrixTranspose(linearTransform(originalInputs, this.wk, this.kbias, this.k));

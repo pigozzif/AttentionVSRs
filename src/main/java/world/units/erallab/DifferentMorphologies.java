@@ -1,8 +1,7 @@
 package world.units.erallab;
 
 
-import it.units.erallab.hmsrobots.core.controllers.Controller;
-import it.units.erallab.hmsrobots.core.controllers.StepController;
+import it.units.erallab.hmsrobots.core.controllers.*;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
 import it.units.erallab.hmsrobots.tasks.Task;
@@ -25,22 +24,24 @@ import java.util.stream.Collectors;
 
 public class DifferentMorphologies {
 
-  private static final String dir = "/Users/federicopigozzi/Desktop/pos-no-pos-no_messages";
+  private static final String dir = "/Users/federicopigozzi/Desktop/neumann-no_step";
   private static final String sensorConfig = "uniform-a+vxy+t-0.01";
 
   public static void main(String[] args) throws IOException {
     int scale = Integer.parseInt(Args.a(args, "scale", null));
     BufferedWriter writer = new BufferedWriter(new FileWriter("transfer.csv", true));
-    for (File file : Files.walk(Paths.get(dir)).filter(p -> Files.isRegularFile(p) && p.toString().contains("best") && p.toString().contains("homo|homo") && p.toString().contains(".ga.")).map(Path::toFile).collect(Collectors.toList())) {
+    //writer.write("velocity;scale;config;shape;run;serialized\n");
+    for (File file : Files.walk(Paths.get(dir)).filter(p -> Files.isRegularFile(p) && p.toString().contains("best") && p.toString().contains(".ga.")).map(Path::toFile).collect(Collectors.toList())) {
       String path = file.getPath();
       System.out.println(path);
       String seed = path.split("\\.")[2];
       String shape = path.split("\\.")[5];
       String config = path.split("\\.")[4];
       Robot<?> originalRobot = SerializationUtils.deserialize(getSerializedFromFile(file), Robot.class, SerializationUtils.Mode.GZIPPED_JSON);
-      Robot<?> newRobot = getNewRobot(originalRobot, shape, config, scale);
+      Robot<?> newRobot = getNewRobot(originalRobot, shape, config, path.contains("attention"), scale);
       Outcome data = getOutcomeFromSimulation(newRobot, seed);
-      writer.write(String.join(";", String.valueOf(data.getVelocity()), String.valueOf(scale), config, shape, seed) + "\n");
+      writer.write(String.join(";", String.valueOf(data.getVelocity()), String.valueOf(scale), config, shape, seed,
+              SerializationUtils.serialize(newRobot, SerializationUtils.Mode.GZIPPED_JSON)) + "\n");
     }
     writer.close();
   }
@@ -65,16 +66,23 @@ public class DifferentMorphologies {
     return serialized;
   }
 
-  private static Robot<?> getNewRobot(Robot<?> originalRobot, String originalShape, String config, int scale) {
+  private static Robot<?> getNewRobot(Robot<?> originalRobot, String originalShape, String config, boolean isAttention, int scale) {
     String newShape = originalShape.split("-")[0];
     if (originalShape.contains("biped") && scale == 2) {
-      newShape = newShape + "-6x4";
+      newShape = /*"comb-7x2";*/newShape + "-6x4";
     }
     else if (originalShape.contains("comb") && scale == 2) {
-      newShape = newShape + "-14x2";
+      newShape = /*"biped-4x3";*/newShape + "-14x2";
     }
     Grid<? extends SensingVoxel> newBody = RobotUtils.buildSensorizingFunction(sensorConfig).apply(RobotUtils.buildShape(newShape));
     PartiallyDistributedSensing controller = new PartiallyDistributedSensing(newBody, config.contains("none") ? 0 : 1, config.split("-")[0], AbstractPartiallyDistributedMapper.getNumberNeighbors(config.split("-")[0], newBody));
+    PartiallyDistributedSensing oldController = ((PartiallyDistributedSensing) ((StepController) originalRobot.getController()).getInnerController());
+    for (Grid.Entry<? extends SensingVoxel> entry : newBody) {
+      if (entry.getValue() == null) {
+        continue;
+      }
+      controller.getFunctions().set(entry.getX(), entry.getY(), oldController.getFunctions().get(0, 0));
+    }
     controller.setDownsamplingParams(scale, (int) originalRobot.getVoxels().count(Objects::nonNull));
     return new Robot<>(Controller.step(controller, 0.33), newBody);
   }
