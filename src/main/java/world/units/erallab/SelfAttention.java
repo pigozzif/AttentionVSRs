@@ -46,6 +46,9 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
   private final double[][] k;
   private final double[][] v;
   private boolean freeze;
+  private int id;
+  private int steps;
+  private int t;
 
   @JsonCreator
   public SelfAttention(@JsonProperty("inner") MultiLayerPerceptron inner,
@@ -76,6 +79,9 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
     this.k = new double[din][dk];
     this.v = new double[din][dv];
     this.freeze = false;
+    this.id = -1;
+    this.steps = 1;
+    this.t = 0;
   }
 
   public SelfAttention(MultiLayerPerceptron inner, int n, int din, int dk, int dv) {
@@ -135,21 +141,20 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
 
   @Override
   public double[] apply(double[] inputs) {
-    return this.inner.apply(flat(this.applyAttention(inputs)));
+    double[] output;
+    if (this.t % this.steps == 0) {
+      output = this.inner.apply(flat(this.applyAttention(inputs)));
+    }
+    else {
+      output = this.inner.apply(flat(this.attention));
+    }
+    ++this.t;
+    return output;
   }
 
   public double[][] applyAttention(double[] inputs) {
     double[][] reshaped = reshapeVector(inputs, this.n, this.din);
-    double[][] originalInputs = new double[this.din][1];
-    int k;
-    for (k = 0; k < reshaped.length; ++k) {
-      if (!Arrays.stream(reshaped[k]).allMatch(d -> d == 0.0)) {
-        for (int j = 0; j < reshaped[k].length; ++j) {
-          originalInputs[j][0] = reshaped[k][j];
-        }
-        break;
-      }
-    }
+    double[][] originalInputs = reshapeVector(reshaped[this.id], this.din, 1);
     if (!this.freeze) {
       linearTransform(originalInputs, this.wq, this.qbias, this.q);
       double[][] keys = matrixTranspose(linearTransform(originalInputs, this.wk, this.kbias, this.k));
@@ -197,6 +202,10 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
   public void setAttention(double[][] attention) {
     this.attention = attention;
   }
+
+  public void setId(int id) { this.id = id; }
+
+  public void setSteps(int steps) { this.steps = steps; }
 
   @Override
   public int getInputDimension() {

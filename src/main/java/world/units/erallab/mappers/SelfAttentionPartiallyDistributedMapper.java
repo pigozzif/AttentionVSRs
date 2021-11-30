@@ -17,6 +17,7 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
   private final int dv;
   private final String distribution;
   private final boolean isTanh;
+  private final int steps;
 
   public SelfAttentionPartiallyDistributedMapper(Grid<? extends SensingVoxel> b, String config) {
     super(b, config.contains("none") ? 0 : 1, config.split("-")[0]);
@@ -26,6 +27,7 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
     this.dv = params[2];
     this.distribution = config.split("-")[4];
     this.isTanh = config.contains("tanh");
+    this.steps = (config.split("-").length >= 5) ? Integer.parseInt(config.split("-")[6]) : 1;
     if (!(this.distribution.equals("homo|homo") || this.distribution.equals("hetero|homo") || this.distribution.equals("homo|hetero") || this.distribution.equals("hetero|hetero"))) {
       throw new IllegalArgumentException(String.format("Distribution model not known: %s", this.distribution));
     }
@@ -40,8 +42,10 @@ public class SelfAttentionPartiallyDistributedMapper extends AbstractPartiallyDi
   public SelfAttention getFunction(PartiallyDistributedSensing controller, Grid.Entry<? extends SensingVoxel> entry) {
     int nVoxels = (int) this.body.count(Objects::nonNull);
     int mlpInput = (this.isTanh) ? nVoxels * this.din : this.din * this.dv;
-    return new SelfAttention(new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, mlpInput, new int[]{}, controller.nOfOutputs(entry.getX(), entry.getY())),
+    SelfAttention attention = new SelfAttention(new MultiLayerPerceptron(MultiLayerPerceptron.ActivationFunction.TANH, mlpInput, new int[]{}, controller.nOfOutputs(entry.getX(), entry.getY())),
               nVoxels, this.din, this.dk, this.dv);
+    attention.setSteps(this.steps);
+    return attention;
   }
 
   @Override

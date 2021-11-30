@@ -81,6 +81,8 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
   private static final int nMessageBins = 25;
   private int[] nMessages;
   private double lastT = Double.NEGATIVE_INFINITY;
+  private int downsamplingScale;
+  private int originalVoxels;
 
   public static int inputs(SensingVoxel voxel, int nNeighbors) {
     return nNeighbors + voxel.getSensors().stream().mapToInt(s -> s.getDomains().length).sum();
@@ -101,7 +103,7 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
     this.config = config;
     this.neighborhood = AbstractPartiallyDistributedMapper.getNeighborhood(config);
     this.outputGrid = Grid.create(functions, f -> 0.0);
-    this.nMessages = new int[nMessageBins];
+    this.downsamplingScale = 1;
     this.reset();
   }
 
@@ -120,6 +122,11 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
             ),
             config
     );
+  }
+
+  public void setDownsamplingParams(int downsamplingScale, int originalVoxels) {
+    this.downsamplingScale = downsamplingScale;
+    this.originalVoxels = originalVoxels;
   }
 
   public Grid<Integer> getInputGrid() {
@@ -165,9 +172,7 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
     //  return this.outputGrid;
     //}
     int i = 0;
-    //int centerOfMassX = (int) Math.ceil((double) voxels.getW() / 2);
-    //int centerOfMassY = (int) Math.ceil((double) voxels.getH() / 2);
-    //double maxDistance = Math.abs(centerOfMassX) + Math.abs(centerOfMassY);
+    int nVoxels = (int) voxels.count(Objects::nonNull);
     for (Grid.Entry<? extends SensingVoxel> entry : voxels) {
       if (entry.getValue() == null) {
         continue;
@@ -176,11 +181,14 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
       double[] signals = this.getLastSignals(entry.getX(), entry.getY(), voxels);
       this.updateBins(signals);
       double[] inputs = entry.getValue().getSensorReadings();
-      //inputs = ArrayUtils.add(inputs, (Math.abs(entry.getX() - centerOfMassX) + Math.abs(entry.getY() - centerOfMassY)) / maxDistance);
       inputs = ArrayUtils.addAll(inputs, signals);
       //compute outputs
       TimedRealFunction function = this.functions.get(entry.getX(), entry.getY());
-      double[] outputs = function != null ? function.apply(t, positionalEncoding(inputs, (int) voxels.count(Objects::nonNull), i++)) : new double[this.nOfOutputs(entry.getX(), entry.getY())];
+      if (function instanceof SelfAttention) {
+        ((SelfAttention) function).setId(i);
+      }
+      double[] processedInputs = positionalEncoding(inputs, nVoxels, i++);//, nVoxels, this.originalVoxels, this.downsamplingScale);
+      double[] outputs = function != null ? function.apply(t, processedInputs) : new double[this.nOfOutputs(entry.getX(), entry.getY())];
       //apply outputs
       this.outputGrid.set(entry.getX(), entry.getY(), outputs[0]);
       System.arraycopy(outputs, 1, this.currSignalsGrid.get(entry.getX(), entry.getY()), 0, this.nOfOutputs(entry.getX(), entry.getY()) - 1);
@@ -229,11 +237,40 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
   }
 
   public static double[] frequencyEncoding(double[] inputs, int n, int i) {
-    double[] pos = new double[n];
+    /*double[] pos = new double[n];
     for (int j = 0; j < n; ++j) {
       pos[j] = Math.cos(i / Math.pow(10000, (2.0 * j) / inputs.length));
     }
-    return SelfAttention.flat(SelfAttention.matrixMult(SelfAttention.reshapeVector(pos, pos.length, 1), SelfAttention.reshapeVector(inputs, 1, inputs.length)));
+    return SelfAttention.flat(SelfAttention.matrixMult(SelfAttention.reshapeVector(pos, pos.length, 1), SelfAttention.reshapeVector(inputs, 1, inputs.length)));*/
+    double[][] pos = new double[n][inputs.length];
+    for (int j = 0; j < n; ++j) {
+      for (int k = 0; k < inputs.length; ++k) {
+        if (i == j) {
+          pos[j][k] = inputs[k];
+        }
+        else {
+          double value = j / Math.pow(10000, (k * 2.0) / inputs.length);
+          pos[j][k] = (k % 2 == 0) ? Math.sin(value) : Math.cos(value);
+        }
+      }
+    }
+    return SelfAttention.flat(SelfAttention.matrixTranspose(pos));
+  }
+
+  private static double[] downsample(double[] inputs, int n, int originalN, int scale) {
+    int dim = inputs.length / n;
+    double[] output = new double[originalN * dim];
+    int k = 0;
+    for (int i = 0; i < originalN; ++i) {
+      for (int j = 0; j < dim; ++j) {
+        for (int p = 0; p < scale && j + p < dim; ++p) {
+          output[i * dim + j] += inputs[k * dim + j + p];
+        }
+        output[i * dim + j] /= scale;
+      }
+      k += scale;
+    }
+    return output;
   }
 
   public int nOfInputs(int x, int y) {

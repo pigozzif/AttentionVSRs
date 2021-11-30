@@ -100,7 +100,7 @@ public class Main extends Worker {
       Collection<Robot<?>> solutions = switch (evolverName) {
         case "cmaes" -> this.evolveCMAES(factory, mapper, trainingTask);
         case "es" -> this.evolveES(factory, mapper, trainingTask);
-        case "ga" -> this.evolveGA(factory, mapper, trainingTask, Map.of(/*new GaussianMutation(0.35D), 0.2D, */new GeometricCrossover(Range.closed(-0.5D, 1.5D)).andThen(new GaussianMutation(0.1D)), 1.0D));
+        case "ga" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new GaussianMutation(0.35D), 0.2D, new GeometricCrossover(Range.closed(-0.5D, 1.5D)).andThen(new GaussianMutation(0.1D)), 0.8D));
         case "ga-mut" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new GaussianMutation(stepSize), 1.0D));
         case "ga-mod-mut" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new ModuleGaussianMutation(0.35D, ((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()), 1.0));
         case "ga-mix-cx" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new ModuleCrossover(((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()).andThen(new GaussianMutation(0.1D)), 8.0D, new GaussianMutation(0.35D), 0.2D));
