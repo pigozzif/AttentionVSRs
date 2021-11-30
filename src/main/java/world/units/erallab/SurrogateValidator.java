@@ -71,8 +71,9 @@ public class SurrogateValidator {
       throw new RuntimeException(String.format("Input file %s does not contain serialization column", fileName));
     }
     SerializationUtils.Mode mode = SerializationUtils.Mode.valueOf(SerializationUtils.Mode.GZIPPED_JSON.name().toUpperCase());
-    return RobotUtils.buildRobotTransformation("identity", random)
+    Robot<?> robot = RobotUtils.buildRobotTransformation("identity", random)
             .apply(SerializationUtils.deserialize(records.get(records.size() - 1).get("best→solution→serialized"), Robot.class, mode));
+    return robot;
   }
 
 }
