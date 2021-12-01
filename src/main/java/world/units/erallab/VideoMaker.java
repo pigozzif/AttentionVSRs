@@ -15,6 +15,7 @@
  */
 package world.units.erallab;
 
+import it.units.erallab.hmsrobots.core.controllers.StepController;
 import it.units.erallab.hmsrobots.core.geometry.BoundingBox;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.tasks.locomotion.Locomotion;
@@ -49,6 +50,7 @@ public class VideoMaker {
   public static void main(String[] args) throws IOException {
     //get params
     String inputFileName = a(args, "input", null);
+    int scale = Integer.parseInt(a(args, "scale", "-1"));
     int iter = Integer.parseInt(a(args, "iter", "-1"));
     int numDirs = inputFileName.split("/").length;
     String seed = inputFileName.split("/")[numDirs - 1].split("\\.")[2];
@@ -131,6 +133,9 @@ public class VideoMaker {
                             .apply(SerializationUtils.deserialize(rawGrid.get(x, y).get(0), Robot.class, mode))
             )
     );
+    if (scale != -1) {
+      namedRobotGrid.stream().forEach(e -> ((PartiallyDistributedSensing) ((StepController) e.getValue().getValue().getController()).getInnerController()).setDownsamplingParams(2, (inputFileName.contains("biped") ? 10 : 11)));
+    }
     //prepare problem
     Locomotion locomotion = new Locomotion(endTime, Locomotion.createTerrain(terrainName), new Settings());
     //do simulations

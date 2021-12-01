@@ -1,6 +1,5 @@
 package world.units.erallab;
 
-
 import it.units.erallab.hmsrobots.core.controllers.*;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
@@ -24,7 +23,7 @@ import java.util.stream.Collectors;
 
 public class DifferentMorphologies {
 
-  private static final String dir = "/Users/federicopigozzi/Desktop/neumann-no_step";
+  private static final String dir = "/Users/federicopigozzi/Desktop/pos-no-pos-no_messages";
   private static final String sensorConfig = "uniform-a+vxy+t-0.01";
 
   public static void main(String[] args) throws IOException {
@@ -38,7 +37,7 @@ public class DifferentMorphologies {
       String shape = path.split("\\.")[5];
       String config = path.split("\\.")[4];
       Robot<?> originalRobot = SerializationUtils.deserialize(getSerializedFromFile(file), Robot.class, SerializationUtils.Mode.GZIPPED_JSON);
-      Robot<?> newRobot = getNewRobot(originalRobot, shape, config, path.contains("attention"), scale);
+      Robot<?> newRobot = getNewRobot(originalRobot, shape, config, scale);
       Outcome data = getOutcomeFromSimulation(newRobot, seed);
       writer.write(String.join(";", String.valueOf(data.getVelocity()), String.valueOf(scale), config, shape, seed,
               SerializationUtils.serialize(newRobot, SerializationUtils.Mode.GZIPPED_JSON)) + "\n");
@@ -66,7 +65,7 @@ public class DifferentMorphologies {
     return serialized;
   }
 
-  private static Robot<?> getNewRobot(Robot<?> originalRobot, String originalShape, String config, boolean isAttention, int scale) {
+  private static Robot<?> getNewRobot(Robot<?> originalRobot, String originalShape, String config, int scale) {
     String newShape = originalShape.split("-")[0];
     if (originalShape.contains("biped") && scale == 2) {
       newShape = /*"comb-7x2";*/newShape + "-6x4";
