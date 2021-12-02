@@ -23,13 +23,13 @@ import java.util.stream.Collectors;
 
 public class DifferentMorphologies {
 
-  private static final String dir = "/Users/federicopigozzi/Desktop/pos-no-pos-no_messages";
+  private static final String dir = "/Users/federicopigozzi/Desktop/geom/";
   private static final String sensorConfig = "uniform-a+vxy+t-0.01";
 
   public static void main(String[] args) throws IOException {
     int scale = Integer.parseInt(Args.a(args, "scale", null));
-    BufferedWriter writer = new BufferedWriter(new FileWriter("transfer.csv", true));
-    //writer.write("velocity;scale;config;shape;run;serialized\n");
+    BufferedWriter writer = new BufferedWriter(new FileWriter("transfer.csv", false));
+    writer.write("velocity;scale;config;shape;run;serialized\n");
     for (File file : Files.walk(Paths.get(dir)).filter(p -> Files.isRegularFile(p) && p.toString().contains("best") && p.toString().contains(".ga.")).map(Path::toFile).collect(Collectors.toList())) {
       String path = file.getPath();
       System.out.println(path);
@@ -68,7 +68,7 @@ public class DifferentMorphologies {
   private static Robot<?> getNewRobot(Robot<?> originalRobot, String originalShape, String config, int scale) {
     String newShape = originalShape.split("-")[0];
     if (originalShape.contains("biped") && scale == 2) {
-      newShape = /*"comb-7x2";*/newShape + "-6x4";
+      newShape = /*"comb-7x2";*/newShape + "-7x4";
     }
     else if (originalShape.contains("comb") && scale == 2) {
       newShape = /*"biped-4x3";*/newShape + "-14x2";

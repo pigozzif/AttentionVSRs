@@ -171,6 +171,9 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
     //else if (t - this.lastT < 0.33) {
     //  return this.outputGrid;
     //}
+    int centerOfMassX = (int) Math.ceil((double) voxels.getW() / 2);
+    int centerOfMassY = (int) Math.ceil((double) voxels.getH() / 2);
+    double maxDistance = Math.abs(centerOfMassX) + Math.abs(centerOfMassY);
     int i = 0;
     int nVoxels = (int) voxels.count(Objects::nonNull);
     for (Grid.Entry<? extends SensingVoxel> entry : voxels) {
@@ -182,6 +185,7 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
       this.updateBins(signals);
       double[] inputs = entry.getValue().getSensorReadings();
       inputs = ArrayUtils.addAll(inputs, signals);
+      //inputs = ArrayUtils.add(inputs, (Math.abs(entry.getX() - centerOfMassX) + Math.abs(entry.getY() - centerOfMassY)) / maxDistance);
       //compute outputs
       TimedRealFunction function = this.functions.get(entry.getX(), entry.getY());
       //if (function instanceof SelfAttention) {
