@@ -46,6 +46,7 @@ import static it.units.malelab.jgea.core.util.Args.*;
 public class VideoMaker {
 
   private static final Logger L = Logger.getLogger(VideoMaker.class.getName());
+  private static final String sensorConfig = DifferentMorphologies.sensorConfig;
 
   public static void main(String[] args) throws IOException {
     //get params
@@ -54,6 +55,7 @@ public class VideoMaker {
     int iter = Integer.parseInt(a(args, "iter", "-1"));
     int numDirs = inputFileName.split("/").length;
     String seed = inputFileName.split("/")[numDirs - 1].split("\\.")[2];
+    String shape = inputFileName.split("/")[numDirs - 1].split("\\.")[5];
     String outputFileName = a(args, "output", null);
     String serializedRobotColumn = a(args, "serializedRobotColumnName", "serialized");
     String terrainName = a(args, "terrain", "hilly-1-10-" + seed);
@@ -134,7 +136,7 @@ public class VideoMaker {
             )
     );
     if (scale != -1) {
-      namedRobotGrid.stream().forEach(e -> ((PartiallyDistributedSensing) ((StepController) e.getValue().getValue().getController()).getInnerController()).setDownsamplingParams(2, (inputFileName.contains("biped") ? 10 : 11)));
+      namedRobotGrid.stream().forEach(e -> ((PartiallyDistributedSensing) ((StepController) e.getValue().getValue().getController()).getInnerController()).setDownsamplingParams(2, RobotUtils.buildShape(getOriginalShape(shape))));
     }
     //prepare problem
     Locomotion locomotion = new Locomotion(endTime, Locomotion.createTerrain(terrainName), new Settings());
@@ -203,6 +205,16 @@ public class VideoMaker {
             ),
             new InfoDrawer(string)
     );
+  }
+
+  public static String getOriginalShape(String newShape) {
+    return switch (newShape) {
+      case "biped-4x3" -> "biped-6x4";
+      case "comb-7x2" -> "comb-14x2";
+      case "biped-6x4" -> "biped-4x3";
+      case "comb-14x2" -> "comb-7x2";
+      default -> throw new IllegalArgumentException(String.format("Unused new shape: %s", newShape));
+    };
   }
 
 }

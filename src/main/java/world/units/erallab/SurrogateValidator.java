@@ -22,11 +22,11 @@ public class SurrogateValidator {
           "steppy-1-10-0", "steppy-1-10-1", "steppy-1-10-2", "steppy-1-10-3", "steppy-1-10-4", "uphill-10", "uphill-20", "downhill-10", "downhill-20"};
   private static final String[] header = {"validation.terrain", "validation.transformation", "validation.seed",
           "outcome.computation.time", "outcome.distance", "outcome.velocity", "\n"};
-  private static final String dir = /*System.getProperty("user.dir") + "/output/";*/ "/Users/federicopigozzi/Desktop/pos-no-pos-no_messages/";
+  private static final String dir = /*System.getProperty("user.dir") + "/output/";*/ "/Users/federicopigozzi/Desktop/geom+pos/";
 
   public static void main(String[] args) throws IOException {
     for (File file : Objects.requireNonNull(new File(dir).listFiles())) {
-      if (file.getPath().contains("best") && (file.getPath().contains("6x4") || file.getPath().contains("14x2"))) {
+      if (file.getPath().contains("best") && (file.getPath().contains("4x3") || file.getPath().contains("7x2"))) {
         //System.out.println(file.getPath());
         validateAndwriteOnFile(file);
       }
@@ -55,7 +55,7 @@ public class SurrogateValidator {
     return validationLocomotion.apply(robot);
   }
 
-  private static Robot<?> parseIndividualFromFile(String fileName, Random random) {
+  public static Robot<?> parseIndividualFromFile(String fileName, Random random) {
     List<CSVRecord> records;
     List<String> headers;
     try {
@@ -71,9 +71,8 @@ public class SurrogateValidator {
       throw new RuntimeException(String.format("Input file %s does not contain serialization column", fileName));
     }
     SerializationUtils.Mode mode = SerializationUtils.Mode.valueOf(SerializationUtils.Mode.GZIPPED_JSON.name().toUpperCase());
-    Robot<?> robot = RobotUtils.buildRobotTransformation("identity", random)
+    return RobotUtils.buildRobotTransformation("identity", random)
             .apply(SerializationUtils.deserialize(records.get(records.size() - 1).get("best→solution→serialized"), Robot.class, mode));
-    return robot;
   }
 
 }

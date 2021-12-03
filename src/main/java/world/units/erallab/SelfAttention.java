@@ -90,12 +90,24 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
   }
   // TODO: rename
   public static int countParams(int din, int dk, int dv, int n) {
-    return (1 * dk) + dk + (1 * dk) + dk + (n * dv) + dv;
+    return countQueriesAndKeysParams(din, dk) + countValuesParams(dv, n);
+  }
+
+  public static int countQueriesAndKeysParams(int din, int dk) {
+    return (1 * dk) + dk + (1 * dk) + dk;
+  }
+
+  public static int countValuesParams(int dv, int n) {
+    return (n * dv) + dv;
   }
 
   public int countParams() { return countParams(this.din, this.dk, this.dv, this.n); }
 
   public double[] getAttentionParams() { return concat(flat(this.wq), flat(this.wk), flat(this.wv), this.qbias, this.kbias, this.vbias); }
+
+  public double[] getQueriesAndKeysMatrices() { return concat(flat(this.wq), flat(this.wk)); }
+
+  public double[] getQueriesAndKeysBias() { return concat(this.qbias, this.kbias); }
 
   public double[] getDownstreamParams() { return this.inner.getParams(); }
 

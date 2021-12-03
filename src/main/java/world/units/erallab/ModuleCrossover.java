@@ -1,6 +1,10 @@
 package world.units.erallab;
 
+import com.google.common.collect.Range;
 import it.units.malelab.jgea.core.operator.Crossover;
+import it.units.malelab.jgea.core.operator.Mutation;
+import it.units.malelab.jgea.representation.sequence.numeric.GaussianMutation;
+import it.units.malelab.jgea.representation.sequence.numeric.GeometricCrossover;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,34 +13,24 @@ import java.util.Random;
 
 public class ModuleCrossover implements Crossover<List<Double>> {
 
+  private final Crossover<List<Double>> innerCrossover;
+  private final Mutation<List<Double>> innerMutation;
   private final int numAttention;
 
-  public ModuleCrossover(int numAttention) {
+  public ModuleCrossover(double lower, double upper, double sigma, int numAttention) {
+    this.innerCrossover = new GeometricCrossover(Range.closed(lower, upper));
+    this.innerMutation = new GaussianMutation(sigma);
     this.numAttention = numAttention;
   }
 
   @Override
   public List<Double> recombine(List<Double> parent1, List<Double> parent2, Random random) {
     List<Double> newBorn = new ArrayList<>();
-    int start1, end1, start2, end2;
-    if (random.nextDouble() < 0.5) {
-      start1 = 0;
-      end1 = this.numAttention;
-      start2 = this.numAttention;
-      end2 = parent2.size();
-    }
-    else {
-      start1 = this.numAttention;
-      end1 = parent1.size();
-      start2 = 0;
-      end2 = this.numAttention;
-    }
-    for (int i = start1; i < end1; ++i) {
+    for (int i = 0; i < numAttention; ++i) {
       newBorn.add(parent1.get(i));
     }
-    for (int j = start2; j < end2; ++j) {
-      newBorn.add(parent2.get(j));
-    }
+    newBorn.addAll(this.innerMutation.mutate(this.innerCrossover.recombine(parent1.subList(this.numAttention, parent1.size()),
+            parent2.subList(this.numAttention, parent2.size()), random), random));
     return newBorn;
   }
 

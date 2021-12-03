@@ -21,23 +21,10 @@ public class ModuleGaussianMutation implements Mutation<List<Double>> {
   @Override
   public List<Double> mutate(List<Double> parent, Random random) {
     List<Double> newBorn = new ArrayList<>();
-    int start, end;
-    if (random.nextDouble() < 0.0) {
-      start = 0;
-      end = this.numAttention;
-      newBorn = this.innerMutation.mutate(parent.subList(start, end), random);
-      for (int i = end; i < parent.size(); ++i) {
-        newBorn.add(parent.get(i));
-      }
+    for (int i = 0; i < this.numAttention; ++i) {
+      newBorn.add(parent.get(i));
     }
-    else {
-      start = this.numAttention;
-      end = parent.size();
-      for (int i = 0; i < start; ++i) {
-        newBorn.add(parent.get(i));
-      }
-      newBorn.addAll(this.innerMutation.mutate(parent.subList(start, end), random));
-    }
+    newBorn.addAll(this.innerMutation.mutate(parent.subList(this.numAttention, parent.size()), random));
     return newBorn;
   }
 

@@ -23,8 +23,8 @@ import java.util.stream.Collectors;
 
 public class DifferentMorphologies {
 
-  private static final String dir = "/Users/federicopigozzi/Desktop/geom/";
-  private static final String sensorConfig = "uniform-a+vxy+t-0.01";
+  private static final String dir = "/Users/federicopigozzi/Desktop/geom+pos/";
+  public static final String sensorConfig = "uniform-a+vxy+t+px+py-0.01";
 
   public static void main(String[] args) throws IOException {
     int scale = Integer.parseInt(Args.a(args, "scale", null));
@@ -67,11 +67,17 @@ public class DifferentMorphologies {
 
   private static Robot<?> getNewRobot(Robot<?> originalRobot, String originalShape, String config, int scale) {
     String newShape = originalShape.split("-")[0];
-    if (originalShape.contains("biped") && scale == 2) {
-      newShape = /*"comb-7x2";*/newShape + "-7x4";
+    if (originalShape.equals("biped-4x3") && scale == 2) {
+      newShape = /*"comb-7x2";*/newShape + "-6x4";
     }
-    else if (originalShape.contains("comb") && scale == 2) {
+    else if (originalShape.equals("comb-7x2") && scale == 2) {
       newShape = /*"biped-4x3";*/newShape + "-14x2";
+    }
+    else if (originalShape.equals("biped-6x4") && scale == 2) {
+      newShape = newShape + "-4x3";
+    }
+    else if (originalShape.equals("comb-14x2") && scale == 2) {
+      newShape = newShape + "-7x2";
     }
     Grid<? extends SensingVoxel> newBody = RobotUtils.buildSensorizingFunction(sensorConfig).apply(RobotUtils.buildShape(newShape));
     PartiallyDistributedSensing controller = new PartiallyDistributedSensing(newBody, config.contains("none") ? 0 : 1, config.split("-")[0], AbstractPartiallyDistributedMapper.getNumberNeighbors(config.split("-")[0], newBody));
@@ -82,7 +88,8 @@ public class DifferentMorphologies {
       }
       controller.getFunctions().set(entry.getX(), entry.getY(), oldController.getFunctions().get(0, 0));
     }
-    controller.setDownsamplingParams(scale, (int) originalRobot.getVoxels().count(Objects::nonNull));
+    Grid<? extends SensingVoxel> originalBody = (Grid<? extends SensingVoxel>) originalRobot.getVoxels();
+    controller.setDownsamplingParams(scale, Grid.create(originalBody, Objects::nonNull));
     return new Robot<>(Controller.step(controller, 0.33), newBody);
   }
 

@@ -82,7 +82,7 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
   private int[] nMessages;
   private double lastT = Double.NEGATIVE_INFINITY;
   private int downsamplingScale;
-  private int originalVoxels;
+  private Grid<Boolean> originalVoxels;
 
   public static int inputs(SensingVoxel voxel, int nNeighbors) {
     return nNeighbors + voxel.getSensors().stream().mapToInt(s -> s.getDomains().length).sum();
@@ -124,7 +124,7 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
     );
   }
 
-  public void setDownsamplingParams(int downsamplingScale, int originalVoxels) {
+  public void setDownsamplingParams(int downsamplingScale, Grid<Boolean> originalVoxels) {
     this.downsamplingScale = downsamplingScale;
     this.originalVoxels = originalVoxels;
   }
@@ -196,7 +196,7 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
         processedInputs = positionalEncoding(inputs, nVoxels, i++);
       }
       else {
-        processedInputs = downsample(positionalEncoding(inputs, nVoxels, i++), nVoxels, this.originalVoxels, this.downsamplingScale);
+        processedInputs = sampleGeom(inputs, (double) entry.getX() / (voxels.getW() - 1), (double) entry.getY() / (voxels.getH() - 1), this.originalVoxels);//downsample(positionalEncoding(inputs, nVoxels, i++), nVoxels, this.originalVoxels, this.downsamplingScale);
       }
       double[] outputs = function != null ? function.apply(t, processedInputs) : new double[this.nOfOutputs(entry.getX(), entry.getY())];
       //apply outputs
@@ -283,6 +283,26 @@ public class PartiallyDistributedSensing extends AbstractController<SensingVoxel
       k += scale;
     }
     return SelfAttention.flat(output);
+  }
+
+  private static double[] sampleGeom(double[] inputs, double x, double y, Grid<Boolean> body) {
+    int newId = -1;
+    int k = 0;
+    double minDist = Double.POSITIVE_INFINITY;
+    for (Grid.Entry<Boolean> entry : body) {
+      if (!entry.getValue()) {
+        continue;
+      }
+      double tempX = (double) entry.getX() / (body.getW() - 1);
+      double tempY = (double) entry.getY() / (body.getH() - 1);
+      double dist = Math.abs(x - tempX) + Math.abs(y - tempY);
+      if (dist < minDist) {
+        newId = k;
+        minDist = dist;
+      }
+      ++k;
+    }
+    return positionalEncoding(inputs, (int) body.count(b -> b), newId);
   }
 
   public int nOfInputs(int x, int y) {

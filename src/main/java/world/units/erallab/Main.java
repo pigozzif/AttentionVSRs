@@ -46,13 +46,14 @@ public class Main extends Worker {
 
   private static int seed;
   private static String evolverName;
-  private static int nEvals;
   private static double episodeTime;
   private static String terrain;
   private static String shape;
   private static String config;
   private static String exp;
   private static String sensorConfig;
+  private static int nEvals;
+  private static boolean isFineTuning;
   private static final double frequencyThreshold = 10.0D;
   private static final int nFrequencySamples = 100;
   private static String  bestFileName = "./output/";
@@ -75,11 +76,12 @@ public class Main extends Worker {
     exp = this.a("exp", null);
     stepSize = Double.parseDouble(this.a("step", "0.35"));
     terrain = this.a("terrain", "hilly-1-10-rnd");
-    sensorConfig = this.a("sensors", "uniform-a+vxy+t+px+py-0.01");
+    sensorConfig = this.a("sensors", "uniform-a+vxy+t-0.01");
+    nEvals = Args.i(this.a("nevals", "30000"));
+    isFineTuning = Boolean.parseBoolean(this.a("finetune", "false"));
     episodeTime = 30.0D;
-    nEvals = 30000;
     physicsSettings = new Settings();
-    bestFileName += String.join(".", "best", evolverName, String.valueOf(seed), exp, config, shape, "csv");
+    bestFileName += String.join(".", (isFineTuning) ? "finetune" : "best", evolverName, String.valueOf(seed), exp, config, shape, "csv");
 
     try {
       this.evolve();
@@ -91,7 +93,8 @@ public class Main extends Worker {
   private void evolve() throws FileNotFoundException {
     Grid<? extends SensingVoxel> body = RobotUtils.buildSensorizingFunction(sensorConfig).apply(RobotUtils.buildShape(shape));
     Function<List<Double>, Robot<?>> mapper = AbstractPartiallyDistributedMapper.mapperFactory(exp, body, config);
-    IndependentFactory<List<Double>> factory = new FixedLengthListFactory<>(((GenotypeSized) mapper).getGenotypeSize(), new UniformDoubleFactory(-1.0D, 1.0D));
+    IndependentFactory<List<Double>> factory = (!isFineTuning) ? new FixedLengthListFactory<>(((GenotypeSized) mapper).getGenotypeSize(), new UniformDoubleFactory(-1.0D, 1.0D)) :
+            new ModuleIndependentFactory(new FixedLengthListFactory<>(((SelfAttentionPartiallyDistributedMapper) mapper).getValuesAndDownstreamSizeForVoxel(), new UniformDoubleFactory(-1.0D, 1.0D)), getAttentionToFineTune(bestFileName, shape, seed), body);
     Function<Robot<?>, Outcome> trainingTask = buildLocomotionTask(new Random(seed));
 
     try {
@@ -100,10 +103,10 @@ public class Main extends Worker {
       Collection<Robot<?>> solutions = switch (evolverName) {
         case "cmaes" -> this.evolveCMAES(factory, mapper, trainingTask);
         case "es" -> this.evolveES(factory, mapper, trainingTask);
-        case "ga" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new GaussianMutation(0.35D), 0.2D, new GeometricCrossover(Range.closed(-0.5D, 1.5D)).andThen(new GaussianMutation(0.1D)), 0.8D));
+        case "ga" -> this.evolveGA(factory, mapper, trainingTask, (!isFineTuning) ? Map.of(new GaussianMutation(0.35D), 0.2D, new GeometricCrossover(Range.closed(-0.5D, 1.5D)).andThen(new GaussianMutation(0.1D)), 0.8D) : Map.of(new ModuleGaussianMutation(0.35D, ((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()), 0.2D, new ModuleCrossover(-0.5D, 1.5D, 0.1D, ((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()), 0.8D));
         case "ga-mut" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new GaussianMutation(stepSize), 1.0D));
-        case "ga-mod-mut" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new ModuleGaussianMutation(0.35D, ((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()), 1.0));
-        case "ga-mix-cx" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new ModuleCrossover(((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()).andThen(new GaussianMutation(0.1D)), 8.0D, new GaussianMutation(0.35D), 0.2D));
+        //case "ga-mod-mut" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new ModuleGaussianMutation(0.35D, ((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()), 1.0));
+        //case "ga-mix-cx" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new ModuleCrossover(((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()).andThen(new GaussianMutation(0.1D)), 8.0D, new GaussianMutation(0.35D), 0.2D));
         default -> throw new IllegalStateException(String.format("Evolver not known: %s", evolverName));
       };
       L.info(String.format("Done %s: %d solutions in %4ds", bestFileName, solutions.size(), stopwatch.elapsed(TimeUnit.SECONDS)));
@@ -166,6 +169,11 @@ public class Main extends Worker {
             Locomotion.createTerrain(terrain.replace("-rnd", "-" + random.nextInt(10000))),
             physicsSettings
     ).apply(r);
+  }
+
+  public static Robot<?> getAttentionToFineTune(String path, String shape, int seed) {
+    String newPath = path.replace("finetune", "best");
+    return SurrogateValidator.parseIndividualFromFile(newPath.replace(shape, VideoMaker.getOriginalShape(shape)), new Random(seed));
   }
 
 }
