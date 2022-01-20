@@ -81,7 +81,7 @@ public class Main extends Worker {
     isFineTuning = Boolean.parseBoolean(this.a("finetune", "false"));
     episodeTime = 30.0D;
     physicsSettings = new Settings();
-    bestFileName += String.join(".", (isFineTuning) ? "finetune" : "best", evolverName, String.valueOf(seed), exp, config, shape, "csv");
+    bestFileName += String.join(".", (isFineTuning) ? "finetune" : "best", evolverName, String.valueOf(seed), exp, config, shape, sensorConfig.split("-")[0], "csv");
 
     try {
       this.evolve();
@@ -91,7 +91,7 @@ public class Main extends Worker {
   }
 
   private void evolve() throws FileNotFoundException {
-    Grid<? extends SensingVoxel> body = RobotUtils.buildSensorizingFunction(sensorConfig).apply(RobotUtils.buildShape(shape));
+    Grid<? extends SensingVoxel> body = AbstractPartiallyDistributedMapper.buildSensingGrid(sensorConfig).apply(RobotUtils.buildShape(shape));
     Function<List<Double>, Robot<?>> mapper = AbstractPartiallyDistributedMapper.mapperFactory(exp, body, config);
     IndependentFactory<List<Double>> factory = (!isFineTuning) ? new FixedLengthListFactory<>(((GenotypeSized) mapper).getGenotypeSize(), new UniformDoubleFactory(-1.0D, 1.0D)) :
             new ModuleIndependentFactory(new FixedLengthListFactory<>(((SelfAttentionPartiallyDistributedMapper) mapper).getValuesAndDownstreamSizeForVoxel(), new UniformDoubleFactory(-1.0D, 1.0D)), getAttentionToFineTune(bestFileName, shape, seed), body);
@@ -173,7 +173,7 @@ public class Main extends Worker {
 
   public static Robot<?> getAttentionToFineTune(String path, String shape, int seed) {
     String newPath = path.replace("finetune", "best");
-    return SurrogateValidator.parseIndividualFromFile(newPath.replace(shape, VideoMaker.getOriginalShape(shape)), new Random(seed));
+    return SurrogateValidator.parseIndividualFromFile(newPath.replace(shape, VideoMaker.getOriginalShape(shape)), new Random(seed), 100);
   }
 
 }

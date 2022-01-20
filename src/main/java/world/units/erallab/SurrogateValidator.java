@@ -22,12 +22,12 @@ public class SurrogateValidator {
           "steppy-1-10-0", "steppy-1-10-1", "steppy-1-10-2", "steppy-1-10-3", "steppy-1-10-4", "uphill-10", "uphill-20", "downhill-10", "downhill-20"};
   private static final String[] header = {"validation.terrain", "validation.transformation", "validation.seed",
           "outcome.computation.time", "outcome.distance", "outcome.velocity", "\n"};
-  private static final String dir = /*System.getProperty("user.dir") + "/output/";*/ "/Users/federicopigozzi/Desktop/geom+pos/";
+  private static final String dir = /*System.getProperty("user.dir") + "/output/";*/ "/Users/federicopigozzi/Desktop/new_seeds/";
 
   public static void main(String[] args) throws IOException {
     for (File file : Objects.requireNonNull(new File(dir).listFiles())) {
       if (file.getPath().contains("best") && (file.getPath().contains("4x3") || file.getPath().contains("7x2"))) {
-        //System.out.println(file.getPath());
+        System.out.println(file.getPath());
         validateAndwriteOnFile(file);
       }
     }
@@ -41,7 +41,7 @@ public class SurrogateValidator {
     int seed = Integer.parseInt(path.split("\\.")[2]);
     Random random = new Random(seed);
     for (String terrain : terrains) {
-      Robot<?> robot = parseIndividualFromFile(file.getPath(), random);
+      Robot<?> robot = parseIndividualFromFile(file.getPath(), random, -1);
       Outcome outcome = validateOnTerrain(robot, terrain, random);
       writer.write(String.join(";", terrain, "identity", String.valueOf(seed),
               String.valueOf(outcome.getComputationTime()), String.valueOf(outcome.getDistance()),
@@ -55,7 +55,7 @@ public class SurrogateValidator {
     return validationLocomotion.apply(robot);
   }
 
-  public static Robot<?> parseIndividualFromFile(String fileName, Random random) {
+  public static Robot<?> parseIndividualFromFile(String fileName, Random random, int iteration) {
     List<CSVRecord> records;
     List<String> headers;
     try {
@@ -72,7 +72,7 @@ public class SurrogateValidator {
     }
     SerializationUtils.Mode mode = SerializationUtils.Mode.valueOf(SerializationUtils.Mode.GZIPPED_JSON.name().toUpperCase());
     return RobotUtils.buildRobotTransformation("identity", random)
-            .apply(SerializationUtils.deserialize(records.get(records.size() - 1).get("best→solution→serialized"), Robot.class, mode));
+            .apply(SerializationUtils.deserialize(records.get((iteration == -1) ? records.size() - 1 : iteration).get("best→solution→serialized"), Robot.class, mode));
   }
 
 }

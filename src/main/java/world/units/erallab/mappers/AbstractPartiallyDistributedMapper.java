@@ -4,9 +4,10 @@ import it.units.erallab.hmsrobots.core.controllers.Controller;
 import it.units.erallab.hmsrobots.core.controllers.RealFunction;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
-import it.units.erallab.hmsrobots.util.Grid;
-import it.units.erallab.hmsrobots.util.Parametrized;
-import it.units.erallab.hmsrobots.util.SerializationUtils;
+import it.units.erallab.hmsrobots.core.sensors.Constant;
+import it.units.erallab.hmsrobots.core.sensors.Noisy;
+import it.units.erallab.hmsrobots.core.sensors.Sensor;
+import it.units.erallab.hmsrobots.util.*;
 import org.apache.commons.math3.util.Pair;
 import world.units.erallab.PartiallyDistributedSensing;
 
@@ -15,6 +16,9 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import static it.units.erallab.hmsrobots.util.RobotUtils.sensor;
 
 // TODO: assumes same sensor config and architecture for every voxel
 public abstract class AbstractPartiallyDistributedMapper<T extends RealFunction & Parametrized> implements Function<List<Double>, Robot<?>>, GenotypeSized {
@@ -83,6 +87,68 @@ public abstract class AbstractPartiallyDistributedMapper<T extends RealFunction 
       case "rnn" -> new RNNMapper(b, config);
       default -> throw new RuntimeException(String.format("Unknown mapper: %s", exp));
     };
+  }
+
+  public static Function<Grid<Boolean>, Grid<? extends SensingVoxel>> buildSensingGrid(String config) {
+    double noiseSigma = 0.01d;
+    return switch (config) {
+      case "high" -> body -> Grid.create(body.getW(), body.getH(),
+              (x, y) -> {
+                if (!body.get(x, y)) {
+                  return null;
+                }
+                return new SensingVoxel(
+                        Utils.ofNonNull(
+                                sensorWrapper("a", x, y, body, true),
+                                sensorWrapper("t", x, y, body, y == 0),
+                                sensorWrapper("vxy", x, y, body, y == body.getH() - 1),
+                                sensorWrapper("l5", x, y, body, x == body.getW() - 1)
+                                ).stream()
+                                .map(s -> (!(s instanceof Constant)) ? new Noisy(s, noiseSigma, 0) : s)
+                                .collect(Collectors.toList())
+                );
+              }
+      );
+      case "medium" -> body -> Grid.create(body.getW(), body.getH(),
+              (x, y) -> {
+                if (!body.get(x, y)) {
+                  return null;
+                }
+                return new SensingVoxel(
+                        Utils.ofNonNull(
+                                sensorWrapper("a", x, y, body, true),
+                                sensorWrapper("t", x, y, body, y == 0),
+                                sensorWrapper("vxy", x, y, body, y == body.getH() - 1)
+                                ).stream()
+                                .map(s -> (!(s instanceof Constant)) ? new Noisy(s, noiseSigma, 0) : s)
+                                .collect(Collectors.toList())
+                );
+              }
+      );
+      case "low" -> body -> Grid.create(body.getW(), body.getH(),
+              (x, y) -> {
+                if (!body.get(x, y)) {
+                  return null;
+                }
+                return new SensingVoxel(
+                        Utils.ofNonNull(
+                                sensorWrapper("a", x, y, body, y >= body.getH() / 2)
+                                ).stream()
+                                .map(s -> (!(s instanceof Constant)) ? new Noisy(s, noiseSigma, 0) : s)
+                                .collect(Collectors.toList())
+                );
+              }
+      );
+      default -> RobotUtils.buildSensorizingFunction(config);
+    };
+  }
+
+  public static Sensor sensorWrapper(String name, int x, int y, Grid<Boolean> body, boolean condition) {
+    Sensor sensor = sensor(name, x, y, body);
+    if (!condition) {
+      return new Constant(IntStream.range(0, sensor.getDomains().length).mapToDouble(i -> 0.0).toArray());
+    }
+    return sensor;
   }
 
 }

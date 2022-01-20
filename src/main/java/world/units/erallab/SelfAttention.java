@@ -153,7 +153,7 @@ public class SelfAttention implements Serializable, Parametrized, RealFunction, 
 
   @Override
   public double[] apply(double[] inputs) {
-    this.freeze = this.t % this.steps != 0;
+    //this.freeze = this.t % this.steps != 0;
     ++this.t;
     return this.inner.apply(flat(this.applyAttention(inputs)));
   }

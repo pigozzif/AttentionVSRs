@@ -74,17 +74,17 @@ public class AttentionDrawer implements Drawer {
     }
     double textH = graphics2D.getFontMetrics().getMaxAscent();
     BoundingBox rBB = BoundingBox.of(
-            graphics2D.getClip().getBounds2D().getMaxX() / 2,
+            graphics2D.getClip().getBounds2D().getX(),
             graphics2D.getClip().getBounds2D().getY(),
             graphics2D.getClip().getBounds2D().getMaxX(),
             graphics2D.getClip().getBounds2D().getMaxY()
     );
-    BoundingBox lBB = BoundingBox.of(
+    /*BoundingBox lBB = BoundingBox.of(
             graphics2D.getClip().getBounds2D().getX(),
             graphics2D.getClip().getBounds2D().getY(),
             graphics2D.getClip().getBounds2D().getMaxX() / 2,
             graphics2D.getClip().getBounds2D().getMaxY()
-    );
+    );*/
     BoundingBox attentionBB = (rBB.width() > rBB.height()) ? BoundingBox.of(
             rBB.min.x + (rBB.width() - rBB.height()) / 2d + textH,
             rBB.min.y + textH,
@@ -96,7 +96,7 @@ public class AttentionDrawer implements Drawer {
             rBB.max.x - textH,
             rBB.max.y - (rBB.height() - rBB.width()) / 2d - textH
     );
-    BoundingBox robotBB = (lBB.width() > lBB.height()) ? BoundingBox.of(
+    /*BoundingBox robotBB = (lBB.width() > lBB.height()) ? BoundingBox.of(
             lBB.min.x + (lBB.width() - lBB.height()) / 2d + textH,
             lBB.min.y + textH,
             lBB.max.x - (lBB.width() - lBB.height()) / 2d - textH,
@@ -106,9 +106,9 @@ public class AttentionDrawer implements Drawer {
             lBB.min.y + (lBB.height() - lBB.width()) / 2d + textH,
             lBB.max.x - textH,
             lBB.max.y - (lBB.height() - lBB.width()) / 2d - textH
-    );
+    );*/
     this.drawAttention(attentionBB, graphics2D);
-    this.drawRobot(robotBB, graphics2D);
+    //this.drawRobot(robotBB, graphics2D);
   }
 
   private static double max(double[][] v) {
@@ -128,9 +128,9 @@ public class AttentionDrawer implements Drawer {
     double wX = attentionBB.width();
     double voxelSizeX = wX / this.body.getW();
     double minY = attentionBB.min.y;
-    double max = Double.MIN_VALUE;
-    double min = Double.MAX_VALUE;
-    for (int i = 0; i < this.body.getW(); ++i) {
+    double max = 1.0;//Double.MIN_VALUE;
+    double min = -1.0;//Double.MAX_VALUE;
+    /*for (int i = 0; i < this.body.getW(); ++i) {
       for (int j = 0; j < this.body.getH(); ++j) {
         if (!this.body.get(i, j)) {
           continue;
@@ -139,7 +139,7 @@ public class AttentionDrawer implements Drawer {
         max = Math.max(max, max(attention));
         min = Math.min(min, min(attention));
       }
-    }
+    }*/
     for (int i = 0; i < this.body.getW(); ++i) {
       for (int j = 0; j < this.body.getH(); ++j) {
         int local_j = this.body.getH() - j - 1;
@@ -150,6 +150,14 @@ public class AttentionDrawer implements Drawer {
         double startY = minY + voxelSizeX * local_j;
         graphics2D.setColor(this.axesColor);
         graphics2D.draw(new Rectangle2D.Double(startX, startY, voxelSizeX, voxelSizeX));
+        if (j == body.getH() - 1) {
+          float stringCenter = (float) ((float) startX + (voxelSizeX / 4) / 2);
+          float verticalPos = (float) (startY + voxelSizeX + 1);
+          graphics2D.drawString("T", stringCenter, verticalPos);
+          graphics2D.drawString("VX", stringCenter * 2, verticalPos);
+          graphics2D.drawString("VY", stringCenter * 3, verticalPos);
+          graphics2D.drawString("A", stringCenter * 4, verticalPos);
+        }
         double[][] attention = this.attentionGrid.get(i, j);
         for (int n = 0; n < attention.length; ++n) {
           for (int m = 0; m < attention[n].length; ++m) {
