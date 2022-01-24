@@ -17,8 +17,10 @@ package world.units.erallab;
 
 import it.units.erallab.hmsrobots.core.controllers.StepController;
 import it.units.erallab.hmsrobots.core.geometry.BoundingBox;
+import it.units.erallab.hmsrobots.core.objects.Ground;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.tasks.locomotion.Locomotion;
+import it.units.erallab.hmsrobots.tasks.locomotion.Outcome;
 import it.units.erallab.hmsrobots.util.Grid;
 import it.units.erallab.hmsrobots.util.RobotUtils;
 import it.units.erallab.hmsrobots.util.SerializationUtils;
@@ -30,6 +32,8 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.tuple.Pair;
 import org.dyn4j.dynamics.Settings;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -46,7 +50,6 @@ import static it.units.malelab.jgea.core.util.Args.*;
 public class VideoMaker {
 
   private static final Logger L = Logger.getLogger(VideoMaker.class.getName());
-  private static final String sensorConfig = DifferentMorphologies.sensorConfig;
 
   public static void main(String[] args) throws IOException {
     //get params
@@ -65,6 +68,7 @@ public class VideoMaker {
     int w = i(a(args, "w", "900"));
     int h = i(a(args, "h", "600"));
     int frameRate = i(a(args, "frameRate", "30"));
+    boolean frames = Boolean.parseBoolean(a(args, "frames", null));
     String encoderName = a(args, "encoder", VideoUtils.EncoderFacility.FFMPEG_LARGE.name());
     SerializationUtils.Mode mode = SerializationUtils.Mode.valueOf(a(args, "deserializationMode", SerializationUtils.Mode.GZIPPED_JSON.name()).toUpperCase());
     //read data
@@ -140,6 +144,15 @@ public class VideoMaker {
     }
     //prepare problem
     Locomotion locomotion = new Locomotion(endTime, Locomotion.createTerrain(terrainName), new Settings());
+    if (frames) {
+      FramesImageBuilder framesImageBuilder = new FramesImageBuilder(
+          4, 6, 0.5, 900, 600, FramesImageBuilder.Direction.HORIZONTAL, basicWithNoSensors()
+      );
+      Outcome result = locomotion.apply(namedRobotGrid.get(0, 0).getValue(), framesImageBuilder);
+      BufferedImage image = framesImageBuilder.getImage();
+      ImageIO.write(image, "png", new File("biped-frames.png"));
+      return;
+    }
     //do simulations
     ScheduledExecutorService uiExecutor = Executors.newScheduledThreadPool(4);
     ExecutorService executor = Executors.newCachedThreadPool();
@@ -147,7 +160,7 @@ public class VideoMaker {
     if (outputFileName == null) {
       gridSnapshotListener = new GridOnlineViewer(
               Grid.create(namedRobotGrid, p -> p == null ? null : p.getLeft()),
-              Grid.create(namedRobotGrid, p -> p == null ? null : (inputFileName.contains("attention")) ? getAttentionDrawer(p.getLeft(), inputFileName) : Drawers.basicWithMiniWorldAndBrain(p.getLeft())),
+              Grid.create(namedRobotGrid, p -> p == null ? null : (inputFileName.contains("attention")) ? getAttentionDrawer(inputFileName) : Drawers.basicWithMiniWorldAndBrain(p.getLeft())),
               uiExecutor
       );
       ((GridOnlineViewer) gridSnapshotListener).start(3);
@@ -157,7 +170,7 @@ public class VideoMaker {
                 w, h, startTime, frameRate, VideoUtils.EncoderFacility.valueOf(encoderName.toUpperCase()),
                 new File(outputFileName),
                 Grid.create(namedRobotGrid, p -> p == null ? null : p.getLeft()),
-                Grid.create(namedRobotGrid, p -> p == null ? null : (inputFileName.contains("attention")) ? getAttentionDrawer(p.getLeft(), inputFileName) : Drawers.basicWithMiniWorld(p.getLeft())));
+                Grid.create(namedRobotGrid, p -> p == null ? null : (inputFileName.contains("attention")) ? getAttentionDrawer(inputFileName) : Drawers.basicWithMiniWorld(p.getLeft())));
       } catch (IOException e) {
         L.severe(String.format("Cannot build grid file writer: %s", e));
         System.exit(-1);
@@ -189,7 +202,7 @@ public class VideoMaker {
     writer.close();
   }
 
-  public static Drawer getAttentionDrawer(String string, String name) {
+  public static Drawer getAttentionDrawer(String name) {
     String shape = name.split("\\.")[5];
     return Drawer.of(
             Drawer.clip(
@@ -203,7 +216,7 @@ public class VideoMaker {
                             new AttentionDrawer(RobotUtils.buildShape(shape))
                     )
             ),
-            new InfoDrawer(string)
+            new InfoDrawer("")
     );
   }
 
@@ -215,6 +228,19 @@ public class VideoMaker {
       case "comb-14x2" -> "comb-7x2";
       default -> throw new IllegalArgumentException(String.format("Unused new shape: %s", newShape));
     };
+  }
+
+  public static Drawer basicWithNoSensors() {
+    return Drawer.of(
+        Drawer.transform(
+            new AllRobotFollower(1.5d, 2),
+            Drawer.of(
+                new PolyDrawer(PolyDrawer.TEXTURE_PAINT, SubtreeDrawer.Extractor.matches(null, Ground.class, null)),
+                new VoxelDrawer()
+            )
+        ),
+        new InfoDrawer("")
+    );
   }
 
 }

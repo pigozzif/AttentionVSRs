@@ -150,22 +150,38 @@ public class AttentionDrawer implements Drawer {
         double startY = minY + voxelSizeX * local_j;
         graphics2D.setColor(this.axesColor);
         graphics2D.draw(new Rectangle2D.Double(startX, startY, voxelSizeX, voxelSizeX));
-        if (j == body.getH() - 1) {
-          float stringCenter = (float) ((float) startX + (voxelSizeX / 4) / 2);
-          float verticalPos = (float) (startY + voxelSizeX + 1);
-          graphics2D.drawString("T", stringCenter, verticalPos);
-          graphics2D.drawString("VX", stringCenter * 2, verticalPos);
-          graphics2D.drawString("VY", stringCenter * 3, verticalPos);
-          graphics2D.drawString("A", stringCenter * 4, verticalPos);
-        }
         double[][] attention = this.attentionGrid.get(i, j);
+        double cellX = voxelSizeX / attention.length;
         for (int n = 0; n < attention.length; ++n) {
+          double cellY = voxelSizeX / attention[n].length;
           for (int m = 0; m < attention[n].length; ++m) {
-            double cellX = voxelSizeX / attention.length;
-            double cellY = voxelSizeX / attention[n].length;
             graphics2D.setColor(DrawingUtils.linear(this.minColor, this.zeroColor, this.maxColor, (float) min, 0, (float) max, (float) attention[n][m]));
             graphics2D.fill(new Rectangle2D.Double(startX + cellX * n, startY + cellY * m, cellX, cellY));
           }
+        }
+        //cellX /= 2;
+        graphics2D.setColor(this.axesColor);
+        if (j == body.getH() - 1) {
+          float stringCenter = (float) (startX + (graphics2D.getFontMetrics().stringWidth("T") / 2.0));
+          float verticalPos = (float) (startY - 1);
+          graphics2D.drawString("T", stringCenter, verticalPos);
+          stringCenter = (float) (startX + cellX);
+          graphics2D.drawString("VX", stringCenter, verticalPos);
+          stringCenter = (float) (startX + cellX * 2);
+          graphics2D.drawString("VY", stringCenter, verticalPos);
+          stringCenter = (float) (startX + (graphics2D.getFontMetrics().stringWidth("A") / 2.0) + cellX * 3);
+          graphics2D.drawString("A", stringCenter, verticalPos);
+        }
+        if (i == 0) {
+          float stringCenter = (float) (startX - (graphics2D.getFontMetrics().stringWidth("VX")) - 1);
+          float verticalPos = (float) (startY + graphics2D.getFontMetrics().getHeight());
+          graphics2D.drawString("T", stringCenter, verticalPos);
+          verticalPos += cellX;
+          graphics2D.drawString("VX", stringCenter, verticalPos);
+          verticalPos += cellX;
+          graphics2D.drawString("VY", stringCenter, verticalPos);
+          verticalPos += cellX;
+          graphics2D.drawString("A", stringCenter, verticalPos);
         }
       }
     }
