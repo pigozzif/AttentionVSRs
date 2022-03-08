@@ -3,7 +3,6 @@ package world.units.erallab;
 import it.units.erallab.hmsrobots.core.controllers.StepController;
 import it.units.erallab.hmsrobots.core.controllers.TimedRealFunction;
 import it.units.erallab.hmsrobots.core.objects.Robot;
-import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
 import it.units.erallab.hmsrobots.core.snapshots.Snapshot;
 import it.units.erallab.hmsrobots.core.snapshots.SnapshotListener;
 import it.units.erallab.hmsrobots.tasks.Task;
@@ -17,9 +16,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 
 public class SaveWeights {
@@ -55,7 +52,7 @@ public class SaveWeights {
 
   }
 
-  private static final String dir = "/Users/federicopigozzi/Desktop/pos-no-pos-no_messages/";
+  private static final String dir = "/Users/federicopigozzi/Desktop/output/";
 
   public static void main(String[] args) throws IOException {
     BufferedWriter writer = new BufferedWriter(new FileWriter("freeze_attention.csv", false));
@@ -63,13 +60,7 @@ public class SaveWeights {
     for (File file : Files.walk(Paths.get(dir)).filter(p -> Files.isRegularFile(p) && p.toString().contains("best") && p.toString().contains("attention") && (p.toString().contains("4x3") || p.toString().contains("7x2"))).map(Path::toFile).collect(Collectors.toList())) {
       String path = file.getPath();
       System.out.println(path);
-      //Robot<?> robot = SerializationUtils.deserialize(getSerializedFromFile(file), Robot.class, SerializationUtils.Mode.GZIPPED_JSON);
       freezeAttentionToFile(writer, file);
-      //Outcome data = getOutcomeFromSimulation(robot, listener);
-      //String experiment = path.split("/")[path.split("/").length - 1];
-      //int dk = Integer.parseInt(experiment.split("\\.")[4].split("-")[2]);
-      //int din = Integer.parseInt(experiment.split("\\.")[4].split("-")[1]);
-      //writeWeightsToFile(robot, dk, din, path.replace("best", "weights"));
     }
     writer.close();
   }
@@ -98,22 +89,6 @@ public class SaveWeights {
     return serialized;
   }
 
-  private static void writeWeightsToFile(Robot<?> robot, int dk, int din, String fileName) throws IOException {
-    BufferedWriter writer = new BufferedWriter(new FileWriter(fileName));
-    double[] weights = Arrays.stream(((SelfAttention) ((PartiallyDistributedSensing) ((StepController<? extends SensingVoxel>) robot.getController()).getInnerController()).getFunctions().get(0, 0)).getAttentionParams()).limit(((long) din * dk) * 2).toArray();
-    writer.write("t;" + String.join(";", IntStream.range(0, weights.length).mapToObj(i -> "w" + i).toArray(String[]::new)) + "\n");
-    writer.write(String.join(";", Arrays.stream(weights).mapToObj(String::valueOf).toArray(String[]::new)));
-    writer.close();
-  }
-
-  /*private static void writeActivationsToFile(AttentionListener listener, BufferedWriter writer) throws IOException {
-    int t = 0;
-    for (double[][] activations : listener.getData()) {
-      writer.write(t + ";" + String.join(";", Arrays.stream(activations).flatMapToDouble(Arrays::stream).mapToObj(String::valueOf).toArray(String[]::new)));
-      ++t;
-    }
-  }*/
-
   private static void freezeAttentionToFile(BufferedWriter writer, File file) throws IOException {
     Robot<?> robot;
     Outcome data;
@@ -135,18 +110,6 @@ public class SaveWeights {
       String[] fragments = file.getPath().split("\\.");
       writer.write(String.join(";", String.valueOf(i), String.valueOf(data.getVelocity()),
               fragments[fragments.length - 3], fragments[fragments.length - 2], fragments[fragments.length - 5]) + "\n");
-    }
-  }
-
-  private static void saveAttention(BufferedWriter writer, File file) throws IOException {
-    AttentionListener listener = new AttentionListener((file.getPath().contains("biped") ? 10 : 11), 30);
-    Robot<?> robot = SerializationUtils.deserialize(getSerializedFromFile(file), Robot.class, SerializationUtils.Mode.GZIPPED_JSON);
-    getOutcomeFromSimulation(robot, 30.0, listener);
-    int t = 0;
-    for (double[][][] attention : listener.getData()) {
-      String attentionString = Arrays.stream(attention).flatMap(Arrays::stream).flatMapToDouble(Arrays::stream).mapToObj(String::valueOf).collect(Collectors.joining("/"));
-      String[] fragments = file.getPath().split("\\.");
-      writer.write(String.join(";", String.valueOf(t++), attentionString,fragments[fragments.length - 3], fragments[fragments.length - 2], fragments[fragments.length - 5]) + "\n");
     }
   }
 

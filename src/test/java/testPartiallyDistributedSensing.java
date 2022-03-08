@@ -9,7 +9,6 @@ import org.apache.commons.math3.util.Pair;
 import org.dyn4j.dynamics.Settings;
 import org.junit.Test;
 import world.units.erallab.PartiallyDistributedSensing;
-import world.units.erallab.PartiallyDistributedSensingMultiple;
 
 import java.util.List;
 import java.util.Objects;

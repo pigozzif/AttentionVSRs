@@ -45,7 +45,6 @@ import static it.units.malelab.jgea.core.listener.NamedFunctions.*;
 public class Main extends Worker {
 
   private static int seed;
-  private static String evolverName;
   private static double episodeTime;
   private static String terrain;
   private static String shape;
@@ -59,7 +58,6 @@ public class Main extends Worker {
   private static final int nFrequencySamples = 100;
   private static String  bestFileName = "./output/";
   private static Settings physicsSettings;
-  private static double stepSize;
 
   public Main(String[] args) {
     super(args);
@@ -71,11 +69,9 @@ public class Main extends Worker {
 
   public void run() {
     seed = Args.i(this.a("seed", null));
-    evolverName = this.a("evolver", null);
     shape = this.a("shape", null);
     config = this.a("config", null);
     exp = this.a("exp", null);
-    stepSize = Double.parseDouble(this.a("step", "0.35"));
     terrain = this.a("terrain", "hilly-1-10-rnd");
     sensorConfig = this.a("sensors", "uniform-a+vxy+t-0.01");
     nEvals = Args.i(this.a("nevals", "30000"));
@@ -83,7 +79,7 @@ public class Main extends Worker {
     transformation = this.a("transformation", "identity");
     episodeTime = 30.0D;
     physicsSettings = new Settings();
-    bestFileName += String.join(".", (isFineTuning) ? "finetune" : "best", evolverName, String.valueOf(seed), exp, config, shape, sensorConfig.split("-")[0], "csv");
+    bestFileName += String.join(".", (isFineTuning) ? "finetune" : "best", String.valueOf(seed), exp, config, shape, sensorConfig.split("-")[0], "csv");
 
     try {
       this.evolve();
@@ -102,31 +98,13 @@ public class Main extends Worker {
     try {
       Stopwatch stopwatch = Stopwatch.createStarted();
       L.info(String.format("Starting %s", bestFileName));
-      Collection<Robot<?>> solutions = switch (evolverName) {
-        case "cmaes" -> this.evolveCMAES(factory, mapper, trainingTask);
-        case "es" -> this.evolveES(factory, mapper, trainingTask);
-        case "ga" -> this.evolveGA(factory, mapper, trainingTask, (!isFineTuning) ? Map.of(new GaussianMutation(0.35D), 0.2D, new GeometricCrossover(Range.closed(-0.5D, 1.5D)).andThen(new GaussianMutation(0.1D)), 0.8D) : Map.of(new ModuleGaussianMutation(0.35D, ((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()), 0.2D, new ModuleCrossover(-0.5D, 1.5D, 0.1D, ((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()), 0.8D));
-        case "ga-mut" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new GaussianMutation(stepSize), 1.0D));
-        //case "ga-mod-mut" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new ModuleGaussianMutation(0.35D, ((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()), 1.0));
-        //case "ga-mix-cx" -> this.evolveGA(factory, mapper, trainingTask, Map.of(new ModuleCrossover(((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()).andThen(new GaussianMutation(0.1D)), 8.0D, new GaussianMutation(0.35D), 0.2D));
-        default -> throw new IllegalStateException(String.format("Evolver not known: %s", evolverName));
-      };
+      Collection<Robot<?>> solutions = this.evolveGA(factory, mapper, trainingTask, (!isFineTuning) ? Map.of(new GaussianMutation(0.35D), 0.2D, new GeometricCrossover(Range.closed(-0.5D, 1.5D)).andThen(new GaussianMutation(0.1D)), 0.8D) : Map.of(new ModuleGaussianMutation(0.35D, ((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()), 0.2D, new ModuleCrossover(-0.5D, 1.5D, 0.1D, ((SelfAttentionPartiallyDistributedMapper) mapper).getAttentionSizeForVoxel()), 0.8D));
       L.info(String.format("Done %s: %d solutions in %4ds", bestFileName, solutions.size(), stopwatch.elapsed(TimeUnit.SECONDS)));
     }
     catch (ExecutionException | InterruptedException e) {
       L.severe(String.format("Cannot complete %s due to %s", bestFileName, e));
       e.printStackTrace();
     }
-  }
-
-  private Collection<Robot<?>> evolveCMAES(IndependentFactory<List<Double>> factory, Function<List<Double>, Robot<?>> mapper, Function<Robot<?>, Outcome> trainingTask) throws ExecutionException, InterruptedException {
-    Evolver<List<Double>, Robot<?>, Outcome> evolver = new CMAESEvolver<>(mapper, factory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()));
-    return evolver.solve(trainingTask, new FitnessEvaluations(nEvals), new Random(seed), this.executorService, createListenerFactory().build());
-  }
-
-  private Collection<Robot<?>> evolveES(IndependentFactory<List<Double>> factory, Function<List<Double>, Robot<?>> mapper, Function<Robot<?>, Outcome> trainingTask) throws ExecutionException, InterruptedException {
-    Evolver<List<Double>, Robot<?>, Outcome> evolver = new BasicEvolutionaryStrategy<>(mapper, factory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()), 0.35D, 40, 10, 1, true);
-    return evolver.solve(trainingTask, new FitnessEvaluations(nEvals), new Random(seed), this.executorService, createListenerFactory().build());
   }
 
   private Collection<Robot<?>> evolveGA(IndependentFactory<List<Double>> factory, Function<List<Double>, Robot<?>> mapper, Function<Robot<?>, Outcome> trainingTask, Map<GeneticOperator<List<Double>>, Double> operatorMap) throws ExecutionException, InterruptedException {
