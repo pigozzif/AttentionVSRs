@@ -6,7 +6,7 @@ By running
 ```
 java -cp libs:JGEA.jar:libs/TwoDimHighlyModularSoftRobots.jar:target/AttentionVSRs.jar world.units.erallab.Main {args}
 ```
-where `{args}` is a placeholder for the arguments you provide (see below), you will launch an evolutionary optimization for evolving jointly the controller (a self attention-based artificial neural network) of Voxel-based Soft Robots (VSRs). At the same time, evolution metadata will be saved inside the `output` folder.
+where `{args}` is a placeholder for the arguments you provide (see below), you will launch an evolutionary optimization for evolving jointly the controller (a self attention-based artificial neural network) of Voxel-based Soft Robots (VSRs). At the same time, evolution metadata will be saved inside the `output` folder. The project has been tested with Java `14.0.2`.
 
 ## Structure
 * `src` contains all the source code for the project;
