@@ -63,7 +63,7 @@ public class RNNMapper implements Function<List<Double>, Robot<?>>, GenotypeSize
       }
       default -> throw new IllegalArgumentException(String.format("Controller type for RNN not known: %s", this.controllerType));
     }
-    return new Robot<>(Controller.step(controller, this.t), SerializationUtils.clone(this.body));
+    return new Robot<>(new StepController<>(controller, this.t), SerializationUtils.clone(this.body));
   }
 
   public RecurrentNeuralNetwork getFunction(int nOfInputs, int nOfOutputs) {

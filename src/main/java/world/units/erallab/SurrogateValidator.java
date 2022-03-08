@@ -22,11 +22,12 @@ public class SurrogateValidator {
           "steppy-1-10-0", "steppy-1-10-1", "steppy-1-10-2", "steppy-1-10-3", "steppy-1-10-4", "uphill-10", "uphill-20", "downhill-10", "downhill-20"};
   private static final String[] header = {"validation.terrain", "validation.transformation", "validation.seed",
           "outcome.computation.time", "outcome.distance", "outcome.velocity", "\n"};
-  private static final String dir = /*System.getProperty("user.dir") + "/output/";*/ "/Users/federicopigozzi/Desktop/new_seeds/";
+  private static final String dir = System.getProperty("user.dir") + "/output/";
+  private static final String transformation = "identity";
 
   public static void main(String[] args) throws IOException {
     for (File file : Objects.requireNonNull(new File(dir).listFiles())) {
-      if (file.getPath().contains("best") && (file.getPath().contains("4x3") || file.getPath().contains("7x2"))) {
+      if (file.getPath().contains("best") && (file.getPath().contains("4x3") || file.getPath().contains("7x2")) && file.getPath().contains("baseline") && !(file.getPath().contains("low") || file.getPath().contains("medium") || file.getPath().contains("high"))) {
         System.out.println(file.getPath());
         validateAndwriteOnFile(file);
       }
@@ -35,15 +36,18 @@ public class SurrogateValidator {
 
   private static void validateAndwriteOnFile(File file) throws IOException {
     String validationFile = file.getPath().replace("best", "validation");
-    BufferedWriter writer = new BufferedWriter(new FileWriter(validationFile));
-    writer.write(String.join(";", header));
+    BufferedWriter writer = new BufferedWriter(new FileWriter(validationFile, true));
+    File f = new File(validationFile);
+    if (!f.exists() && !f.isDirectory()) {
+      writer.write(String.join(";", header));
+    }
     String path = file.getPath().split("/")[file.getPath().split("/").length - 1];
     int seed = Integer.parseInt(path.split("\\.")[2]);
     Random random = new Random(seed);
     for (String terrain : terrains) {
       Robot<?> robot = parseIndividualFromFile(file.getPath(), random, -1);
       Outcome outcome = validateOnTerrain(robot, terrain, random);
-      writer.write(String.join(";", terrain, "identity", String.valueOf(seed),
+      writer.write(String.join(";", terrain, transformation, String.valueOf(seed),
               String.valueOf(outcome.getComputationTime()), String.valueOf(outcome.getDistance()),
               String.valueOf(outcome.getVelocity()), "\n"));
     }
@@ -71,7 +75,7 @@ public class SurrogateValidator {
       throw new RuntimeException(String.format("Input file %s does not contain serialization column", fileName));
     }
     SerializationUtils.Mode mode = SerializationUtils.Mode.valueOf(SerializationUtils.Mode.GZIPPED_JSON.name().toUpperCase());
-    return RobotUtils.buildRobotTransformation("identity", random)
+    return RobotUtils.buildRobotTransformation(transformation, random)
             .apply(SerializationUtils.deserialize(records.get((iteration == -1) ? records.size() - 1 : iteration).get("best→solution→serialized"), Robot.class, mode));
   }
 

@@ -65,8 +65,8 @@ public class VideoMaker {
     String transformationName = a(args, "transformation", "identity");
     double startTime = d(a(args, "startTime", "0.0"));
     double endTime = d(a(args, "endTime", "30.0"));
-    int w = i(a(args, "w", "900"));
-    int h = i(a(args, "h", "600"));
+    int w = i(a(args, "w", "450"));
+    int h = i(a(args, "h", "300"));
     int frameRate = i(a(args, "frameRate", "30"));
     boolean frames = Boolean.parseBoolean(a(args, "frames", null));
     String encoderName = a(args, "encoder", VideoUtils.EncoderFacility.FFMPEG_LARGE.name());

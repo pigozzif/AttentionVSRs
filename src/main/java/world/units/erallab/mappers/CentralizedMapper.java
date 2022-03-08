@@ -1,9 +1,6 @@
 package world.units.erallab.mappers;
 
-import it.units.erallab.hmsrobots.core.controllers.CentralizedSensing;
-import it.units.erallab.hmsrobots.core.controllers.Controller;
-import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
-import it.units.erallab.hmsrobots.core.controllers.RealFunction;
+import it.units.erallab.hmsrobots.core.controllers.*;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
 import it.units.erallab.hmsrobots.util.Grid;
@@ -45,7 +42,7 @@ public class CentralizedMapper implements Function<List<Double>, Robot<?>>, Geno
             this.nVoxels, this.din, this.dk, (this.isTanh) ? this.din : this.dv);
     CentralizedSensing controller = new CentralizedSensing(this.nVoxels * this.din, this.nVoxels, function);
     ((Parametrized) controller.getFunction()).setParams(genotype.stream().mapToDouble(d -> d).toArray());
-    return new Robot<>(Controller.step(controller, 0.33), SerializationUtils.clone(body));
+    return new Robot<>(new StepController<>(controller, 0.33), SerializationUtils.clone(body));
   }
 
   public int getAttentionSizeForVoxel() {

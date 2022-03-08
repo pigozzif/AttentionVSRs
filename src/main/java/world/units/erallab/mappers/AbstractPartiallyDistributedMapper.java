@@ -2,6 +2,7 @@ package world.units.erallab.mappers;
 
 import it.units.erallab.hmsrobots.core.controllers.Controller;
 import it.units.erallab.hmsrobots.core.controllers.RealFunction;
+import it.units.erallab.hmsrobots.core.controllers.StepController;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
 import it.units.erallab.hmsrobots.core.sensors.Constant;
@@ -52,7 +53,7 @@ public abstract class AbstractPartiallyDistributedMapper<T extends RealFunction 
       this.setFuncParams(function, genotype, num++);
       controller.getFunctions().set(entry.getX(), entry.getY(), function);
     }
-    return new Robot<>(Controller.step(controller, this.t), SerializationUtils.clone(this.body));
+    return new Robot<>(new StepController<>(controller, this.t), SerializationUtils.clone(this.body));
   }
 
   public abstract T getFunction(PartiallyDistributedSensing controller, Grid.Entry<? extends SensingVoxel> entry);

@@ -161,7 +161,7 @@ public class AttentionDrawer implements Drawer {
         }
         //cellX /= 2;
         graphics2D.setColor(this.axesColor);
-        if (j == body.getH() - 1) {
+        /*if (j == body.getH() - 1) {
           float stringCenter = (float) (startX + (graphics2D.getFontMetrics().stringWidth("T") / 2.0));
           float verticalPos = (float) (startY - 1);
           graphics2D.drawString("T", stringCenter, verticalPos);
@@ -182,7 +182,7 @@ public class AttentionDrawer implements Drawer {
           graphics2D.drawString("VY", stringCenter, verticalPos);
           verticalPos += cellX;
           graphics2D.drawString("A", stringCenter, verticalPos);
-        }
+        }*/
       }
     }
     this.drawLegend(min, max, BoundingBox.of(minX + wX, minY, minX + wX + this.legendSize, minY + voxelSizeX * this.body.getH()), graphics2D.getFontMetrics().charWidth('m'), graphics2D);

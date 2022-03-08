@@ -54,6 +54,7 @@ public class Main extends Worker {
   private static String sensorConfig;
   private static int nEvals;
   private static boolean isFineTuning;
+  private static String transformation;
   private static final double frequencyThreshold = 10.0D;
   private static final int nFrequencySamples = 100;
   private static String  bestFileName = "./output/";
@@ -79,6 +80,7 @@ public class Main extends Worker {
     sensorConfig = this.a("sensors", "uniform-a+vxy+t-0.01");
     nEvals = Args.i(this.a("nevals", "30000"));
     isFineTuning = Boolean.parseBoolean(this.a("finetune", "false"));
+    transformation = this.a("transformation", "identity");
     episodeTime = 30.0D;
     physicsSettings = new Settings();
     bestFileName += String.join(".", (isFineTuning) ? "finetune" : "best", evolverName, String.valueOf(seed), exp, config, shape, sensorConfig.split("-")[0], "csv");
@@ -95,7 +97,7 @@ public class Main extends Worker {
     Function<List<Double>, Robot<?>> mapper = AbstractPartiallyDistributedMapper.mapperFactory(exp, body, config);
     IndependentFactory<List<Double>> factory = (!isFineTuning) ? new FixedLengthListFactory<>(((GenotypeSized) mapper).getGenotypeSize(), new UniformDoubleFactory(-1.0D, 1.0D)) :
             new ModuleIndependentFactory(new FixedLengthListFactory<>(((SelfAttentionPartiallyDistributedMapper) mapper).getValuesAndDownstreamSizeForVoxel(), new UniformDoubleFactory(-1.0D, 1.0D)), getAttentionToFineTune(bestFileName, shape, seed), body);
-    Function<Robot<?>, Outcome> trainingTask = buildLocomotionTask(new Random(seed));
+    Function<Robot<?>, Outcome> trainingTask = buildLocomotionTask(transformation, new Random(seed));
 
     try {
       Stopwatch stopwatch = Stopwatch.createStarted();
@@ -152,8 +154,8 @@ public class Main extends Worker {
     );
   }
 
-  public static Function<Robot<?>, Outcome> buildLocomotionTask(Random random) {
-    return buildLocomotionTask(terrain, episodeTime, random, physicsSettings);
+  public static Function<Robot<?>, Outcome> buildLocomotionTask(String transformation, Random random) {
+    return buildLocomotionTask(terrain, episodeTime, random, physicsSettings).compose(RobotUtils.buildRobotTransformation(transformation, random));
   }
 
   public static Function<Robot<?>, Outcome> buildLocomotionTask(String terrain, double episodeTime, Random random, Settings physicsSettings) {

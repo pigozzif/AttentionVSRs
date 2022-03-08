@@ -90,7 +90,7 @@ public class DifferentMorphologies {
     }
     Grid<? extends SensingVoxel> originalBody = (Grid<? extends SensingVoxel>) originalRobot.getVoxels();
     controller.setDownsamplingParams(scale, Grid.create(originalBody, Objects::nonNull));
-    return new Robot<>(Controller.step(controller, 0.33), newBody);
+    return new Robot<>(new StepController<>(controller, 0.33), newBody);
   }
 
 }
