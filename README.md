@@ -38,4 +38,12 @@ where {...} denotes a finite and discrete set of possible choices for the corres
 * threads: the number of threads to perform evolution with. Defaults to the number of available cores on the current CPU. Parallelization is taken care by JGEA and implements a distributed fitness assessment.
 
 ## Bibliography
-TODO, if accepted
+Please cite as:
+```
+@article{pigozzi2022evolving,
+  title={Evolving Modular Soft Robots without Explicit Inter-Module Communication using Local Self-Attention},
+  author={Pigozzi, Federico and Tang, Yujin and Medvet, Eric and Ha, David},
+  journal={arXiv preprint arXiv:2204.06481},
+  year={2022}
+}
+```
