@@ -1,7 +1,7 @@
 # Evolving Modular Soft Robots without Explicit Inter-Module Communication using Local Self-Attention
 This is the official repository for the GECCO (Genetic and Evolutionary Computation Conference, 2022) paper
 
-**<a href="">Evolving Modular Soft Robots without Explicit Inter-Module Communication using Local Self-Attention</a>**
+**<a href="https://arxiv.org/abs/2204.06481">Evolving Modular Soft Robots without Explicit Inter-Module Communication using Local Self-Attention</a>**
 <br>
 <a href="https://pigozzif.github.io">Federico Pigozzi</a>,
 <a href="https://scholar.google.co.jp/citations?user=3czUzRYAAAAJ&hl=en">Yujin Tang</a>,
