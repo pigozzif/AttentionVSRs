@@ -3,10 +3,10 @@ This is the official repository for the GECCO (Genetic and Evolutionary Computat
 
 **<a href="">Evolving Modular Soft Robots without Explicit Inter-Module Communication using Local Self-Attention</a>**
 <br>
-<a>Federico Pigozzi</a>,
-<a>Yujin Tang</a>,
-<a>Eric Medvet</a>,
-<a>David Ha</a>
+<a href="https://pigozzif.github.io">Federico Pigozzi</a>,
+<a href="https://scholar.google.co.jp/citations?user=3czUzRYAAAAJ&hl=en">Yujin Tang</a>,
+<a href="https://medvet.inginf.units.it">Eric Medvet</a>,
+<a href="https://scholar.google.com/citations?user=J1j92GsxVUMC&hl=en">David Ha</a>
 <br>
 
 hosting all the code necessary to replicate the experiments. This work was carried out at the Evolutionary Robotics and Artificial Life Laboratory (ERALLab) at the University of Trieste (Italy). More videos available at this [link](https://softrobots.github.io).
